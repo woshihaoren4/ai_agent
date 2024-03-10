@@ -1,0 +1,21 @@
+[workspace]
+members = ["agent", "rt"]
+
+[workspace.package]
+edition = "2021"
+authors = ["Teshin <1443965173@qq.com>"]
+repository = "https://github.com/woshihaoren4/rush"
+keywords = ["agent-rt"]
+description = "agent scheduling"
+license = "MIT"
+readme = "README.md"
+
+[workspace.dependencies]
+wd_tools = {version = "0.10.0",features = ["point-free","sync"]}
+anyhow = "1.0.75"
+serde = {version = "1.0.188",features = ["derive"]}
+serde_json = "1.0.105"
+tokio = {version = "1",features = ["full"]}
+async-channel = "2.2.0"
+wd_log = "0.2.0"
+async-trait = "0.1.77"
