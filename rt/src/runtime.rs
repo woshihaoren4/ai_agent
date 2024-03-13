@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::future::Future;
 use std::ops::DerefMut;
@@ -7,7 +8,6 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::task::Poll;
 use async_channel::{Receiver, Sender};
-use serde::{Deserialize, Serialize};
 use wd_tools::{PFArc, PFErr};
 use crate::{CallBack, CallBackSet, Context, Node, NodeLoader, Task, TaskInput, TaskOutput};
 use crate::default_callback_set::DefaultCallbackSet;
@@ -99,7 +99,7 @@ impl Runtime{
         rt.start_result_consumer();
         self.status.store(1,Ordering::Relaxed);
     }
-    pub async fn raw_run(&self, mut ctx:Context, first_node_id:String, mut input:TaskInput) ->anyhow::Result<TaskOutput>{
+    pub async fn raw_run(&self, mut ctx:Context, first_node_id:String, input:TaskInput) ->anyhow::Result<TaskOutput>{
         let status = self.status.load(Ordering::Relaxed);
         if self.status.load(Ordering::Relaxed) != 1{
             return anyhow::anyhow!("Runtime status[{}] not running",status).err();
@@ -108,7 +108,7 @@ impl Runtime{
         ctx.set_output(output.clone());
         let ctx = Arc::new(ctx);
         let code = ctx.code.clone();
-        let task = Task::new(ctx,"".into(),first_node_id,input.get_value());
+        let task = Task::new(ctx,"".into(),first_node_id,Box::new(Some(true))).set_input(input);
         let rtw = RuntimeWait::new(code,self.callback.clone(),output);
 
         if let Some(ref s) = self.task_chan{
@@ -120,9 +120,8 @@ impl Runtime{
         let result = rtw.await;
         Ok(result)
     }
-    pub async fn run<S:Into<String>,F:Into<String>,In:Serialize,Out:for<'a> Deserialize<'a>>(&self,task_code:S,first_node_id:F,input:In)->anyhow::Result<Out>{
-        let input = serde_json::to_value(input)?;
-        let input = TaskInput::new("".into(),input);
+    pub async fn run<S:Into<String>,F:Into<String>,In:Any+Send+Sync+'static,Out:Any+Send+Sync+'static>(&self,task_code:S,first_node_id:F,input:In)->anyhow::Result<Out>{
+        let input = TaskInput::from_value(input);
         let ctx = Context::new(task_code.into());
 
         let mut output = self.raw_run(ctx, first_node_id.into(), input).await?;
@@ -131,8 +130,10 @@ impl Runtime{
             return anyhow::anyhow!("run error:{}",e).err();
         }
 
-        let output = output.get_value();
-        let output:Out = serde_json::from_value(output)?;Ok(output)
+        match output.get_value(){
+            Some(out)=>Ok(out),
+            None=> anyhow::anyhow!("output type reflect failed or not result").err(),
+        }
     }
 
     fn start_result_consumer(self){

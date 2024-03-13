@@ -1,44 +1,83 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 use std::task::Waker;
-use serde_json::Value;
 
 mod runtime;
 mod rwmap_node_loader;
 mod default_callback_set;
 
+pub use runtime::*;
+pub use rwmap_node_loader::*;
+pub use default_callback_set::*;
+
 #[derive(Debug,Default)]
 pub struct TaskInput{
-    args:HashMap<String,Value>
+    args:HashMap<String,Box<dyn Any+Send+Sync+'static>>
 }
 impl TaskInput{
-    pub fn set_value(&mut self,val:Value){
-        self.args.insert("default".into(),val);
+    pub fn args_len(&self)->usize{
+        self.args.len()
     }
-    pub fn get_value(&mut self)->Value{
+    pub fn set_value<T:Any+Send+Sync+'static>(&mut self,val:T){
+        self.args.insert("default".into(),Box::new(val));
+    }
+    pub fn get_value<T:Any>(&mut self)->Option<T>{
         let mut key = String::new();
         for (k,_) in self.args.iter(){
             key  = k.to_string();
         }
-        if let Some(s) = self.args.remove(key.as_str()){
-            return s
+        if let Some(s) = self.args.get(key.as_str()){
+            if s.downcast_ref::<T>().is_none(){
+                return None
+            }
+        }else {
+            return None
         }
-        return Value::Null
+        if let Some(s) = self.args.remove(key.as_str()){
+            unsafe {
+                let ptr = Box::into_raw(s) as *mut T;
+                let t = Box::from_raw(ptr);
+                return Some(*t)
+            }
+        }
+        return None
     }
+    pub fn ref_value<T:Any>(&self)->Option<&T>{
+        let mut key = String::new();
+        for (k,_) in self.args.iter(){
+            key  = k.to_string();
+        }
+        if let Some(s) = self.args.get(key.as_str()){
+            return s.downcast_ref()
+        }
+        return None
+    }
+    pub fn new<T:Any+Send+Sync+'static>(id:String,val:T)->Self{
+        let mut args:HashMap<String,Box<dyn Any+Send+Sync+'static>> = HashMap::new();
+        args.insert(id,Box::new(val));
+        Self{args}
+    }
+    pub fn from_box_value(id:String,val:Box<dyn Any+Send+Sync+'static>)->Self{
+        let mut args:HashMap<String,Box<dyn Any+Send+Sync+'static>> = HashMap::new();
+        args.insert(id,val);
+        Self{args}
+    }
+    pub fn from_value<T:Any+Send+Sync+'static>(val:T)->Self{
+        Self::new("".into(),val)
+    }
+
 
     fn append(&mut self,ti:TaskInput){
         self.args.extend(ti.args);
     }
-    pub fn new(id:String,val:Value)->Self{
-        let args = HashMap::from([(id,val)]);
-        Self{args}
-    }
+
 }
 #[derive(Debug)]
 pub struct TaskOutput{
     pub over: bool,
-    pub result:HashMap<String,Value>,
+    pub result:HashMap<String,Box<dyn Any+Send+Sync+'static>>,
 
     error: Option<anyhow::Error>,
     ctx : Arc<Context>,
@@ -54,26 +93,37 @@ impl Default for TaskOutput{
     }
 }
 impl TaskOutput {
-    pub fn value(val:Value)->Self{
+    pub fn from_value<T:Any+Send+Sync+'static>(val:T)->Self{
         Self::new("".into(),val)
     }
-    pub fn new(next_id:String,val:Value)->Self{
+    pub fn new<T:Any+Send+Sync+'static>(next_id:String,val:T)->Self{
         let mut op = Self::default();
-        op.result.insert(next_id,val);
+        op.result.insert(next_id,Box::new(val));
         op
     }
     pub fn over(mut self)->Self{
         self.over = true;self
     }
-    pub fn get_value(&mut self)->Value{
+    pub fn get_value<T:Any>(&mut self)->Option<T>{
         let mut key = String::new();
         for (k,_) in self.result.iter(){
             key  = k.to_string();
         }
-        if let Some(s) = self.result.remove(key.as_str()){
-            return s
+        if let Some(s) = self.result.get(key.as_str()){
+            if s.downcast_ref::<T>().is_none(){
+                return None
+            }
+        }else {
+            return None
         }
-        return Value::Null
+        if let Some(s) = self.result.remove(key.as_str()){
+            unsafe {
+                let ptr = Box::into_raw(s) as *mut T;
+                let t = Box::from_raw(ptr);
+                return Some(*t)
+            }
+        }
+        return None
     }
     pub fn get_context(&self)->Arc<Context>{
         self.ctx.clone()
@@ -100,7 +150,7 @@ pub struct Context{
     code: String, //任务流的唯一标识
     flow:Mutex<Vec<String>>,  //format: round:task_id->task_id
     output:Arc<Mutex<Option<TaskOutput>>>,
-    map:Mutex<HashMap<String,Value>>,
+    map:Mutex<HashMap<String,Box<dyn Any+Send+Sync+'static>>>,
 }
 impl Context{
     pub fn new<S:Into<String>>(code:S)->Self{
@@ -108,18 +158,35 @@ impl Context{
         ctx.code = code.into();
         ctx
     }
-    pub fn set<S:Into<String>>(&self,key:S,val:Value){
+    pub fn set<S:Into<String>,V:Any+Send+Sync+'static>(&self,key:S,val:V){
         let mut lock = self.map.lock().unwrap();
-        lock.insert(key.into(),val);
+        lock.insert(key.into(),Box::new(val));
     }
-    pub fn get<O,F:FnOnce(Option<&Value>)->O>(&self,key:&str,function:F)->O{
-        let lock = self.map.lock().unwrap();
-        let opt = lock.get(key);
-        function(opt)
-    }
-    pub fn remove(&self,key:&str)->Option<Value>{
+    pub fn get<I:Any,O,F:FnOnce(Option<&mut I>)->O>(&self,key:&str,function:F)->O{
         let mut lock = self.map.lock().unwrap();
-        lock.remove(key)
+        let opt = lock.get_mut(key);
+        if opt.is_none(){
+            return function(None)
+        }
+        let input = opt.unwrap().downcast_mut::<I>();
+        function(input)
+    }
+    pub fn remove<V:Any>(&self,key:&str)->Option<V>{
+        let mut lock = self.map.lock().unwrap();
+        let val = lock.remove(key)?;
+        if let Some(_) = val.downcast_ref::<V>(){
+            let ptr = Box::into_raw(val) as *mut V;
+            unsafe {
+                let t = Box::from_raw(ptr);
+                return Some(*t)
+            }
+        }
+        return None
+
+    }
+    pub fn get_round(&self)->usize{
+        let _lock = self.flow.lock().unwrap();
+        self.round
     }
 
     fn add_task_to_chain(&self,prev:&str,next:&str){
@@ -142,20 +209,26 @@ pub struct Task{
 }
 
 impl Task {
-    pub fn new(ctx:Arc<Context>,prev:String,next:String,input:Value)->Self{
-        let input = TaskInput::new(prev,input);
+    pub fn new(ctx:Arc<Context>,prev:String,next:String,input:Box<dyn Any+Send+Sync+'static>)->Self{
+        let input = TaskInput::from_box_value(prev,input);
         Self{
             ctx,
             input,
             node_id:next
         }
     }
+    pub fn set_input(mut self,input:TaskInput)->Self{
+        self.input = input;self
+    }
 }
 
 #[async_trait::async_trait]
 pub trait Node:Send+Sync {
     fn id(&self)->String;
-    fn ready(&self,ctx:Arc<Context>,args:&TaskInput)->bool;
+    // ready: 只能判断流程节点，不能用来做参数校验
+    fn ready(&self,_ctx:Arc<Context>,_args:&TaskInput)->bool{
+        true
+    }
     async fn go(&self, ctx:Arc<Context>, args:TaskInput) ->anyhow::Result<TaskOutput>;
 }
 pub trait NodeLoader:Send+Sync{
@@ -200,7 +273,7 @@ mod tests {
         async fn go(&self, _ctx: Arc<Context>, _args: TaskInput) -> anyhow::Result<TaskOutput> {
             // println!("run --->{}",self.0);
             if self.1 {
-                Ok(TaskOutput::new("".into(),Value::String("success".into())).over())
+                Ok(TaskOutput::from_value("success".to_string()).over())
             }else{
                 Ok(TaskOutput::new("2".into(),Value::Null))
             }
@@ -219,7 +292,7 @@ mod tests {
             let mut ctx = Context::default();
             ctx.code = "1->2".into();
             let mut output = rt.raw_run(ctx, "1".into(), TaskInput::new("".into(), Value::Null)).await.unwrap();
-            assert_eq!(Value::String("success".into()),output.get_value());
+            assert_eq!("success".to_string(),output.get_value::<String>().unwrap());
         }
         let ms = start_time.elapsed().as_millis();
         println!("user time :{}ms",ms);

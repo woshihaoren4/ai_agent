@@ -13,3 +13,11 @@ readme.workspace = true
 
 [dependencies]
 rt = {path = "../rt",version = "0.1"}
+tokio.workspace = true
+async-openai.workspace = true
+anyhow.workspace = true
+wd_tools.workspace = true
+wd_log.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
