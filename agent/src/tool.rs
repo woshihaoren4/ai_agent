@@ -4,9 +4,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use async_openai::types::{ChatCompletionMessageToolCall, ChatCompletionRequestMessage, ChatCompletionRequestToolMessageArgs, ChatCompletionTool, ChatCompletionToolArgs, ChatCompletionToolType, FunctionObject, FunctionObjectArgs};
 use serde_json::Value;
-use wd_tools::PFErr;
+use wd_tools::{PFErr, PFOk};
 use rt::{Context, Node, TaskInput, TaskOutput};
-use crate::consts::{go_next_or_over};
+use crate::consts::{AGENT_TOOL_WRAPPER, go_next_or_over};
 
 pub struct ToolNode{
     id:String,
@@ -122,6 +122,43 @@ impl Node for ToolNode{
         };
         return anyhow::anyhow!("tool args error").err();
 
+    }
+}
+
+#[derive(Debug,Default,Clone)]
+pub struct AgentTool{
+    agent_id:String,
+    description:String
+}
+impl AgentTool{
+    pub fn new(agent_id:String,description:String)->Self{
+        Self{agent_id,description}
+    }
+    pub fn get_agent_id(&self)->&str{
+        self.agent_id.as_str()
+    }
+    pub fn parameters()->Value{
+        Value::from_str(r#"{"type":"object","properties":{"input":{"type":"string","description":"user input"}}}"#).unwrap()
+    }
+    pub fn as_openai_tool(&self)->ChatCompletionTool{
+        ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(FunctionObjectArgs::default()
+                .name(self.id())
+                .parameters(Self::parameters())
+                .description(self.description.clone())
+                .build().unwrap())
+            .build().unwrap().into()
+    }
+}
+#[async_trait::async_trait]
+impl Node for AgentTool {
+    fn id(&self) -> String {
+        format!("{}_{}",AGENT_TOOL_WRAPPER,self.agent_id)
+    }
+
+    async fn go(&self, _ctx: Arc<Context>, _args: TaskInput) -> anyhow::Result<TaskOutput> {
+        TaskOutput::new(self.agent_id.clone(),1usize).ok()
     }
 }
 

@@ -8,6 +8,10 @@ pub const NEXT_NODE_IDS:&'static str = "context_next_node_ids";
 
 pub const AGENT_EXEC_STATUS:&'static str = "agent_exec_status";
 
+pub const AGENT_TOOL_WRAPPER:&'static str = "agent_tool_wrapper";
+
+pub const MULTI_AGENT_RECALL_TOOLS:&'static str = "multi_agent_recall_tools";
+
 pub fn callback_self<T:Any+Send+Sync+'static>(ctx:Arc<Context>,id:String,next_id:String,val:T)->anyhow::Result<TaskOutput>{
     let result = ctx.get(NEXT_NODE_IDS,|opt:Option<&mut Vec<String>>|{
         if let Some(ids) = opt{
@@ -21,7 +25,6 @@ pub fn callback_self<T:Any+Send+Sync+'static>(ctx:Arc<Context>,id:String,next_id
     }
     TaskOutput::new(next_id,val).ok()
 }
-
 pub fn go_next_or_over<T:Any+Send+Sync+'static>(ctx:Arc<Context>,resp:T)->anyhow::Result<TaskOutput>{
     let result = ctx.get(NEXT_NODE_IDS,|ids:Option<&mut Vec<String>>|{
         if let Some(ids)=ids{

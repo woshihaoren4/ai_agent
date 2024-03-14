@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::collections::HashMap;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
 use std::task::Waker;
 
@@ -188,7 +188,17 @@ impl Context{
         let _lock = self.flow.lock().unwrap();
         self.round
     }
-
+    pub fn get_flow_stack(&self)->Vec<String>{
+        let mut lock = self.flow.lock().unwrap();
+        return lock.deref().clone()
+    }
+    pub fn flow_key_analyze(key:&str)->(String,String,String){
+        let v: Vec<&str> = key.split(&[':', '-', '>'][..]).collect();
+        if v.len() < 3{
+            return (v[0].to_string(),String::new(),v[2].to_string())
+        }
+        return (v[0].to_string(),v[1].to_string(),v[2].to_string())
+    }
     fn add_task_to_chain(&self,prev:&str,next:&str){
         let mut lock = self.flow.lock().unwrap();
         #[allow(invalid_reference_casting)]

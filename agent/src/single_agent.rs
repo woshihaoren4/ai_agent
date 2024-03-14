@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use async_openai::types::{ChatChoice, ChatCompletionMessageToolCall, ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage, ChatCompletionRequestToolMessage, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestUserMessageArgs, ChatCompletionResponseMessage, ChatCompletionTool, CreateChatCompletionResponse, FinishReason, FunctionCall};
-use wd_tools::{PFErr, PFOk};
+use wd_tools::{PFArc, PFErr, PFOk};
 use rt::{Context, Node, TaskInput, TaskOutput};
-use crate::consts::{AGENT_EXEC_STATUS, callback_self, go_next_or_over};
+use crate::consts::{AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER, callback_self, go_next_or_over, MULTI_AGENT_RECALL_TOOLS};
 use crate::llm::LLMNodeRequest;
 use crate::Memory;
 use crate::memory::SimpleMemory;
+use crate::tool::AgentTool;
 
 
 #[derive(Clone)]
@@ -31,16 +32,29 @@ impl Default for SingleAgentNode{
 }
 
 impl SingleAgentNode{
+    pub fn set_id<S:Into<String>>(mut self,id:S)->Self{
+        self.id = id.into();self
+    }
     pub fn set_prompt<S:Into<String>>(mut self,pp:S)->Self{
         self.prompt = pp.into();self
     }
     pub fn add_tool(mut self,tool:ChatCompletionTool)->Self{
         self.tools.push(tool);self
     }
-    fn exec_llm(&self,ctx: Arc<Context>, msg: ChatCompletionRequestMessage)->anyhow::Result<TaskOutput>{
+    pub fn set_memory(mut self,memory:Arc<dyn Memory>)->Self{
+        self.memory = memory;self
+    }
+    fn add_msg_to_context(ctx: Arc<Context>, msg: ChatCompletionRequestMessage){
+        let _:() = ctx.get("session_context",move |x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
+            if let Some(list) = x{
+                list.push(msg);
+            }
+        });
+    }
+    fn exec_llm(&self,ctx: Arc<Context>)->anyhow::Result<TaskOutput>{
         let mut context = ctx.get("session_context",move |x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
             if let Some(list) = x{
-                list.push(msg);list.clone()
+                list.clone()
             }else{
                 vec![]
             }
@@ -51,6 +65,17 @@ impl SingleAgentNode{
         req.context = self.memory.load_context(self.max_context_window)?;
         req.context.append(&mut context);
         req.tools.append(&mut self.tools.clone());
+        let self_id = self.id();
+        let req = ctx.get(MULTI_AGENT_RECALL_TOOLS,|tools:Option<&mut Vec<AgentTool>>|{
+            if let Some(ts) = tools{
+                for i in ts.iter(){
+                    if i.get_agent_id() != self_id{
+                        req.tools.push(i.as_openai_tool())
+                    }
+                }
+            }
+            return req;
+        });
 
         ctx.set(AGENT_EXEC_STATUS,3usize);
         callback_self(ctx,self.id.clone(),self.llm_model.clone(),req)
@@ -69,6 +94,12 @@ impl SingleAgentNode{
         // TaskOutput::from_value(msg).over().ok()
     }
     fn function_call(&self,ctx:Arc<Context>,tool:ChatCompletionMessageToolCall)->anyhow::Result<TaskOutput>{
+        // agent tool 不需要回来了
+        if tool.function.name.starts_with(AGENT_TOOL_WRAPPER) {
+            println!("to agent:>{}",tool.function.name);
+            return TaskOutput::new(tool.function.name,1usize).ok()
+        }
+
         let tool_info = serde_json::to_string(&tool.function)?;
         println!("call  :-->{}", tool_info);
         let tool_calls = vec![tool.clone()];
@@ -101,18 +132,28 @@ impl Node for SingleAgentNode{
         match status.unwrap() {
             //用户发问
             1 =>{
-                ctx.set("session_context",Vec::<ChatCompletionRequestMessage>::new());
-                let query = args.get_value::<String>().unwrap();
-                let req:ChatCompletionRequestMessage = ChatCompletionRequestUserMessageArgs::default()
-                    .content(query)
-                    .build().unwrap().into();
-                return self.exec_llm(ctx,req)
+                if ctx.get("session_context",|x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
+                    x.is_none()
+                }){
+                    ctx.set("session_context",Vec::<ChatCompletionRequestMessage>::new());
+                }
+
+                let query = args.get_value::<String>();
+                if let Some(q) = query{
+                    let req:ChatCompletionRequestMessage = ChatCompletionRequestUserMessageArgs::default()
+                        .content(q)
+                        .build().unwrap().into();
+                    Self::add_msg_to_context(ctx.clone(),req);
+                }
+
+                return self.exec_llm(ctx)
             }
             //工具执行结果
             2 =>{
                 let resp = args.get_value::<ChatCompletionRequestMessage>().unwrap();
                 println!("tool  :-->{:?}", resp);
-                return self.exec_llm(ctx,resp)
+                Self::add_msg_to_context(ctx.clone(),resp);
+                return self.exec_llm(ctx)
             }
             //模型回复
             3 =>{
