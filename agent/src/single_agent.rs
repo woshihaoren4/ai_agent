@@ -2,16 +2,17 @@ use std::sync::Arc;
 use async_openai::types::{ChatChoice, ChatCompletionMessageToolCall, ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage, ChatCompletionRequestToolMessage, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestUserMessageArgs, ChatCompletionResponseMessage, ChatCompletionTool, CreateChatCompletionResponse, FinishReason, FunctionCall};
 use wd_tools::{PFErr, PFOk};
 use rt::{Context, Node, TaskInput, TaskOutput};
-use crate::consts::{AGENT_EXEC_STATUS, callback_self};
+use crate::consts::{AGENT_EXEC_STATUS, callback_self, go_next_or_over};
 use crate::llm::LLMNodeRequest;
 use crate::Memory;
 use crate::memory::SimpleMemory;
 
 
+#[derive(Clone)]
 pub struct SingleAgentNode{
     prompt:String,
     tools:Vec<ChatCompletionTool>,
-    memory:Box<dyn Memory>,
+    memory:Arc<dyn Memory>,
 
     id:String,
     max_context_window:usize,
@@ -21,7 +22,7 @@ impl Default for SingleAgentNode{
     fn default() -> Self {
         let prompt = String::new();
         let tools = vec![];
-        let memory = Box::new(SimpleMemory::default());
+        let memory = Arc::new(SimpleMemory::default());
         let id = "single_agent".into();
         let max_context_window = 3;
         let llm_model = "gpt-3.5-turbo".into();
@@ -62,7 +63,10 @@ impl SingleAgentNode{
             .content(msg.clone())
             .build().unwrap().into();
         self.memory.add_session_log(vec![user_question,ai_response]);
-        TaskOutput::from_value(msg).over().ok()
+
+
+        go_next_or_over(ctx,msg)
+        // TaskOutput::from_value(msg).over().ok()
     }
     fn function_call(&self,ctx:Arc<Context>,tool:ChatCompletionMessageToolCall)->anyhow::Result<TaskOutput>{
         let tool_info = serde_json::to_string(&tool.function)?;
