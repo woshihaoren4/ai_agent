@@ -3,28 +3,40 @@ use std::sync::Arc;
 use wd_tools::PFOk;
 use rt::{Context, Node, Runtime, TaskInput, TaskOutput};
 use crate::consts::{callback_self, MULTI_AGENT_RECALL_TOOLS};
+use crate::infra::{embedding_small_1536, top_n};
 use crate::single_agent::SingleAgentNode;
 use crate::tool::AgentTool;
 
+#[derive(Debug)]
+pub enum RecallMod{
+    First,
+    Specific(String),
+    Embedding(usize),
+}
+
+impl Default for RecallMod {
+    fn default() -> Self {
+        RecallMod::First
+    }
+}
 
 // 先找到能够解决问题的agent
 // 投入问题 得到答案
 #[derive(Debug,Default)]
 pub struct MultiAgent{
-    agents:HashMap<String,String>, //id description
-
-    agent_tools:HashMap<String,AgentTool>,
+    agents:Vec<(String,String)>, //id description
+    agent_tools:Vec<AgentTool>,
+    agent_vec:Vec<Vec<f32>>,
 
     id:String,
     // 召回前几个
-    top_n:usize,
     debug:bool,
+    recall_mod:RecallMod,
 }
 
 impl MultiAgent{
     pub fn new<S:Into<String>>(id:S)->Self{
         let id = id.into();
-        let top_n = 5;
         Self{id,
         ..Default::default()}
     }
@@ -32,29 +44,54 @@ impl MultiAgent{
         self.debug = true;self
     }
     // fixme 实际召回比较准的方式应该是根据 query+pe+portrait+context 进行召回，或者走个小模型
-    pub fn agent_recall(&self,_query:&str)->(String,Vec<AgentTool>){
-        let mut agent_id = String::new();
-        for (i,_) in self.agents.iter(){
-            agent_id = i.to_string();
+    pub async fn agent_recall(&self,query:&str)->anyhow::Result<(String,Vec<AgentTool>)>{
+        match self.recall_mod {
+            RecallMod::First => {
+                let tools = self.agent_tools.iter().map(|t|t.clone()).collect::<Vec<AgentTool>>();
+                return (self.agents[0].0.clone(),tools).ok()
+            }
+            RecallMod::Specific(ref id) => {
+                let tools = self.agent_tools.iter().map(|t|t.clone()).collect::<Vec<AgentTool>>();
+                return (id.clone(),tools).ok()
+            }
+            RecallMod::Embedding(ref n) => {
+                let query_vec = embedding_small_1536(vec![query]).await?;
+                let list =  top_n(&query_vec[0],&self.agent_vec,*n);
+                let mut tools = vec![];
+                for i in list{
+                    if let Some(i) = self.agent_tools.get(i){
+                        tools.push(i.clone());
+                    }
+                }
+                return (tools[0].get_agent_id().to_string(),tools).ok()
+            }
         }
-        // let agent_id = "life_AI".to_string();
-
-        let tools = self.agent_tools.iter().map(|(_,t)|t.clone()).collect::<Vec<AgentTool>>();
-
-        (agent_id,tools)
     }
     pub fn add_tools_to_context(ctx: Arc<Context>,tools:Vec<AgentTool>){
         ctx.set(MULTI_AGENT_RECALL_TOOLS,tools);
     }
     pub fn register_agent<S:Into<String>>(&mut self,agent:&SingleAgentNode,desc:S){
         let desc = desc.into();
-        self.agents.insert(agent.id(),desc.clone());
-        self.agent_tools.insert(agent.id(),AgentTool::new(agent.id(),desc));
+        self.agents.push((agent.id(),desc.clone()));
+        self.agent_tools.push(AgentTool::new(agent.id(),desc));
     }
     pub fn add_self_to_rt(&self,rt:&mut Runtime){
-        for (_,tool) in self.agent_tools.iter(){
+        for tool in self.agent_tools.iter(){
             rt.upsert_node(tool.id(),tool.clone());
         }
+    }
+    pub fn recall_specific_mod(&mut self,agent_id:&str){
+        self.recall_mod = RecallMod::Specific(agent_id.to_string());
+    }
+    pub async fn enable_embedding_recall_mod(&mut self,top_n:usize)->anyhow::Result<()>{
+        let mut query = Vec::with_capacity(self.agents.len());
+        for (_,i) in self.agents.iter(){
+            query.push(i.as_str());
+        }
+        let vecs = embedding_small_1536(query).await?;
+        self.agent_vec = vecs;
+        self.recall_mod = RecallMod::Embedding(top_n);
+        Ok(())
     }
 }
 
@@ -73,7 +110,7 @@ impl Node for MultiAgent{
         }
 
         let query = args.get_value::<String>().unwrap();
-        let (agent,tools) = self.agent_recall(query.as_str());
+        let (agent,tools) = self.agent_recall(query.as_str()).await?;
         Self::add_tools_to_context(ctx.clone(),tools);
 
         if self.debug{
@@ -119,7 +156,8 @@ mod test{
         let mut multi_agent = MultiAgent::new("unite_brain").debug_mod();
         multi_agent.register_agent(&info_agent,"查询新闻，天气，搜索");
         multi_agent.register_agent(&life_agent,"购物，外卖，旅游");
-
+        // multi_agent.recall_specific_mod("life_AI");
+        multi_agent.enable_embedding_recall_mod(3).await.unwrap();
 
         let mut rt = Runtime::new();
         rt.upsert_node(weather_tool.id(),weather_tool);

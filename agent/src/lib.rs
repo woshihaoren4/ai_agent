@@ -7,6 +7,7 @@ mod tool;
 mod memory;
 mod single_agent;
 mod multi_agent;
+mod infra;
 
 pub trait Memory:Send+Sync{
     fn load_context(&self,max:usize)->anyhow::Result<Vec<ChatCompletionRequestMessage>>;
