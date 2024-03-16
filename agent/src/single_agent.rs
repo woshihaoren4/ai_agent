@@ -1,25 +1,30 @@
-use std::sync::Arc;
-use async_openai::types::{ChatChoice, ChatCompletionMessageToolCall, ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage, ChatCompletionRequestToolMessage, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestUserMessageArgs, ChatCompletionResponseMessage, ChatCompletionTool, CreateChatCompletionResponse, FinishReason, FunctionCall};
-use wd_tools::{PFArc, PFErr, PFOk};
-use rt::{Context, Node, TaskInput, TaskOutput};
-use crate::consts::{AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER, callback_self, go_next_or_over, MULTI_AGENT_RECALL_TOOLS};
+use crate::consts::{
+    callback_self, go_next_or_over, AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER, MULTI_AGENT_RECALL_TOOLS,
+};
 use crate::llm::LLMNodeRequest;
-use crate::Memory;
 use crate::memory::SimpleMemory;
 use crate::tool::AgentTool;
-
+use crate::Memory;
+use async_openai::types::{
+    ChatChoice, ChatCompletionMessageToolCall, ChatCompletionRequestAssistantMessageArgs,
+    ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionTool,
+    CreateChatCompletionResponse, FinishReason,
+};
+use rt::{Context, Node, TaskInput, TaskOutput};
+use std::sync::Arc;
+use wd_tools::{PFErr, PFOk};
 
 #[derive(Clone)]
-pub struct SingleAgentNode{
-    prompt:String,
-    tools:Vec<ChatCompletionTool>,
-    memory:Arc<dyn Memory>,
+pub struct SingleAgentNode {
+    prompt: String,
+    tools: Vec<ChatCompletionTool>,
+    memory: Arc<dyn Memory>,
 
-    id:String,
-    max_context_window:usize,
-    llm_model:String,
+    id: String,
+    max_context_window: usize,
+    llm_model: String,
 }
-impl Default for SingleAgentNode{
+impl Default for SingleAgentNode {
     fn default() -> Self {
         let prompt = String::new();
         let tools = vec![];
@@ -27,38 +32,55 @@ impl Default for SingleAgentNode{
         let id = "single_agent".into();
         let max_context_window = 3;
         let llm_model = "gpt-3.5-turbo".into();
-        Self{prompt,tools,memory,id ,max_context_window,llm_model}
+        Self {
+            prompt,
+            tools,
+            memory,
+            id,
+            max_context_window,
+            llm_model,
+        }
     }
 }
 
-impl SingleAgentNode{
-    pub fn set_id<S:Into<String>>(mut self,id:S)->Self{
-        self.id = id.into();self
+impl SingleAgentNode {
+    pub fn set_id<S: Into<String>>(mut self, id: S) -> Self {
+        self.id = id.into();
+        self
     }
-    pub fn set_prompt<S:Into<String>>(mut self,pp:S)->Self{
-        self.prompt = pp.into();self
+    pub fn set_prompt<S: Into<String>>(mut self, pp: S) -> Self {
+        self.prompt = pp.into();
+        self
     }
-    pub fn add_tool(mut self,tool:ChatCompletionTool)->Self{
-        self.tools.push(tool);self
+    pub fn add_tool(mut self, tool: ChatCompletionTool) -> Self {
+        self.tools.push(tool);
+        self
     }
-    pub fn set_memory(mut self,memory:Arc<dyn Memory>)->Self{
-        self.memory = memory;self
+    pub fn set_memory(mut self, memory: Arc<dyn Memory>) -> Self {
+        self.memory = memory;
+        self
     }
-    fn add_msg_to_context(ctx: Arc<Context>, msg: ChatCompletionRequestMessage){
-        let _:() = ctx.get("session_context",move |x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
-            if let Some(list) = x{
-                list.push(msg);
-            }
-        });
+    fn add_msg_to_context(ctx: Arc<Context>, msg: ChatCompletionRequestMessage) {
+        let _: () = ctx.get(
+            "session_context",
+            move |x: Option<&mut Vec<ChatCompletionRequestMessage>>| {
+                if let Some(list) = x {
+                    list.push(msg);
+                }
+            },
+        );
     }
-    fn exec_llm(&self,ctx: Arc<Context>)->anyhow::Result<TaskOutput>{
-        let mut context = ctx.get("session_context",move |x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
-            if let Some(list) = x{
-                list.clone()
-            }else{
-                vec![]
-            }
-        });
+    fn exec_llm(&self, ctx: Arc<Context>) -> anyhow::Result<TaskOutput> {
+        let mut context = ctx.get(
+            "session_context",
+            move |x: Option<&mut Vec<ChatCompletionRequestMessage>>| {
+                if let Some(list) = x {
+                    list.clone()
+                } else {
+                    vec![]
+                }
+            },
+        );
 
         let mut req = LLMNodeRequest::default();
         req.prompt = self.prompt.clone();
@@ -66,141 +88,158 @@ impl SingleAgentNode{
         req.context.append(&mut context);
         req.tools.append(&mut self.tools.clone());
         let self_id = self.id();
-        let req = ctx.get(MULTI_AGENT_RECALL_TOOLS,|tools:Option<&mut Vec<AgentTool>>|{
-            if let Some(ts) = tools{
-                for i in ts.iter(){
-                    if i.get_agent_id() != self_id{
-                        req.tools.push(i.as_openai_tool())
+        let req = ctx.get(
+            MULTI_AGENT_RECALL_TOOLS,
+            |tools: Option<&mut Vec<AgentTool>>| {
+                if let Some(ts) = tools {
+                    for i in ts.iter() {
+                        if i.get_agent_id() != self_id {
+                            req.tools.push(i.as_openai_tool())
+                        }
                     }
                 }
-            }
-            return req;
-        });
+                return req;
+            },
+        );
 
-        ctx.set(AGENT_EXEC_STATUS,3usize);
-        callback_self(ctx,self.id.clone(),self.llm_model.clone(),req)
+        ctx.set(AGENT_EXEC_STATUS, 3usize);
+        callback_self(ctx, self.id.clone(), self.llm_model.clone(), req)
     }
-    fn over(&self,ctx: Arc<Context>,msg:String)->anyhow::Result<TaskOutput>{
-        let user_question = ctx.get("session_context",move |x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
-            x.unwrap().remove(0)
-        });
-        let ai_response:ChatCompletionRequestMessage = ChatCompletionRequestAssistantMessageArgs::default()
-            .content(msg.clone())
-            .build().unwrap().into();
-        self.memory.add_session_log(vec![user_question,ai_response]);
+    fn over(&self, ctx: Arc<Context>, msg: String) -> anyhow::Result<TaskOutput> {
+        let user_question = ctx.get(
+            "session_context",
+            move |x: Option<&mut Vec<ChatCompletionRequestMessage>>| x.unwrap().remove(0),
+        );
+        let ai_response: ChatCompletionRequestMessage =
+            ChatCompletionRequestAssistantMessageArgs::default()
+                .content(msg.clone())
+                .build()
+                .unwrap()
+                .into();
+        self.memory
+            .add_session_log(vec![user_question, ai_response]);
 
-
-        go_next_or_over(ctx,msg)
+        go_next_or_over(ctx, msg)
         // TaskOutput::from_value(msg).over().ok()
     }
-    fn function_call(&self,ctx:Arc<Context>,tool:ChatCompletionMessageToolCall)->anyhow::Result<TaskOutput>{
+    fn function_call(
+        &self,
+        ctx: Arc<Context>,
+        tool: ChatCompletionMessageToolCall,
+    ) -> anyhow::Result<TaskOutput> {
         // agent tool 不需要回来了
         if tool.function.name.starts_with(AGENT_TOOL_WRAPPER) {
-            println!("to agent:>{}",tool.function.name);
-            return TaskOutput::new(tool.function.name,1usize).ok()
+            println!("to agent:>{}", tool.function.name);
+            return TaskOutput::new(tool.function.name, 1usize).ok();
         }
 
         let tool_info = serde_json::to_string(&tool.function)?;
         println!("call  :-->{}", tool_info);
         let tool_calls = vec![tool.clone()];
-        let _:() = ctx.get("session_context",move |x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
-            let msg:ChatCompletionRequestMessage = ChatCompletionRequestAssistantMessageArgs::default()
-                .tool_calls(tool_calls)
-                // .content(tool_info)
-                .build().unwrap().into();
-            if let Some(s) = x{
-                s.push(msg)
-            };
-        });
+        let _: () = ctx.get(
+            "session_context",
+            move |x: Option<&mut Vec<ChatCompletionRequestMessage>>| {
+                let msg: ChatCompletionRequestMessage =
+                    ChatCompletionRequestAssistantMessageArgs::default()
+                        .tool_calls(tool_calls)
+                        // .content(tool_info)
+                        .build()
+                        .unwrap()
+                        .into();
+                if let Some(s) = x {
+                    s.push(msg)
+                };
+            },
+        );
         let name = tool.function.name.clone();
-        ctx.set(AGENT_EXEC_STATUS,2usize);
-        callback_self(ctx,self.id.clone(),name,tool)
+        ctx.set(AGENT_EXEC_STATUS, 2usize);
+        callback_self(ctx, self.id.clone(), name, tool)
     }
 }
 
 #[async_trait::async_trait]
-impl Node for SingleAgentNode{
+impl Node for SingleAgentNode {
     fn id(&self) -> String {
         self.id.clone()
     }
 
     async fn go(&self, ctx: Arc<Context>, mut args: TaskInput) -> anyhow::Result<TaskOutput> {
         let mut status = ctx.remove::<usize>(AGENT_EXEC_STATUS);
-        if status.is_none(){
+        if status.is_none() {
             status = Some(1);
         }
         match status.unwrap() {
             //用户发问
-            1 =>{
-                if ctx.get("session_context",|x:Option<&mut Vec<ChatCompletionRequestMessage>>|{
-                    x.is_none()
-                }){
-                    ctx.set("session_context",Vec::<ChatCompletionRequestMessage>::new());
+            1 => {
+                if ctx.get(
+                    "session_context",
+                    |x: Option<&mut Vec<ChatCompletionRequestMessage>>| x.is_none(),
+                ) {
+                    ctx.set(
+                        "session_context",
+                        Vec::<ChatCompletionRequestMessage>::new(),
+                    );
                 }
 
                 let query = args.get_value::<String>();
-                if let Some(q) = query{
-                    let req:ChatCompletionRequestMessage = ChatCompletionRequestUserMessageArgs::default()
-                        .content(q)
-                        .build().unwrap().into();
-                    Self::add_msg_to_context(ctx.clone(),req);
+                if let Some(q) = query {
+                    let req: ChatCompletionRequestMessage =
+                        ChatCompletionRequestUserMessageArgs::default()
+                            .content(q)
+                            .build()
+                            .unwrap()
+                            .into();
+                    Self::add_msg_to_context(ctx.clone(), req);
                 }
 
-                return self.exec_llm(ctx)
+                return self.exec_llm(ctx);
             }
             //工具执行结果
-            2 =>{
+            2 => {
                 let resp = args.get_value::<ChatCompletionRequestMessage>().unwrap();
                 println!("tool  :-->{:?}", resp);
-                Self::add_msg_to_context(ctx.clone(),resp);
-                return self.exec_llm(ctx)
+                Self::add_msg_to_context(ctx.clone(), resp);
+                return self.exec_llm(ctx);
             }
             //模型回复
-            3 =>{
-                let mut resp:CreateChatCompletionResponse = args.get_value().unwrap();
-                let ChatChoice{
+            3 => {
+                let mut resp: CreateChatCompletionResponse = args.get_value().unwrap();
+                let ChatChoice {
                     message,
                     finish_reason,
                     ..
                 } = resp.choices.remove(0);
-                match finish_reason.unwrap(){
+                match finish_reason.unwrap() {
                     FinishReason::Stop => {
-                        return self.over(ctx,message.content.unwrap_or("无语".to_string()))
+                        return self.over(ctx, message.content.unwrap_or("无语".to_string()))
                     }
                     FinishReason::ToolCalls => {
-                        return self.function_call(ctx,message.tool_calls.unwrap().remove(0))
+                        return self.function_call(ctx, message.tool_calls.unwrap().remove(0))
                     }
-                    _=>{
-                        return anyhow::anyhow!("unknown finish_reason").err()
-                    }
+                    _ => return anyhow::anyhow!("unknown finish_reason").err(),
                 }
             }
             //错误
-            _ =>{
-                return anyhow::anyhow!("single agent unknown status").err()
-            }
+            _ => return anyhow::anyhow!("single agent unknown status").err(),
         }
-        Err(anyhow::anyhow!(""))
+        // Err(anyhow::anyhow!(""))
     }
 }
 
 #[cfg(test)]
-mod test{
-    use std::io::{BufRead, Write};
-    use rt::{Node, Runtime};
-    use crate::llm::{LLMNode};
-    use crate::memory::SimpleMemory;
+mod test {
+    use crate::llm::LLMNode;
     use crate::single_agent::SingleAgentNode;
     use crate::tool::ToolNode;
-
+    use rt::{Node, Runtime};
+    use std::io::{BufRead, Write};
 
     // cargo test single_agent::test::test_single_agent -- --nocapture
     #[tokio::test]
-    async fn test_single_agent(){
+    async fn test_single_agent() {
         let weather_tool = ToolNode::mock_get_current_weather();
         let taobao_tool = ToolNode::mock_taobao();
-        let memory = SimpleMemory::default();
-        let llm_35:LLMNode = LLMNode::default();
+        let llm_35: LLMNode = LLMNode::default();
         let pp = "你是一个智能助手，回答要幽默风趣，尽量简洁。";
         let agent = SingleAgentNode::default()
             .set_prompt(pp)
@@ -208,10 +247,10 @@ mod test{
             .add_tool(taobao_tool.as_openai_tool());
 
         let mut rt = Runtime::new();
-        rt.upsert_node(weather_tool.id(),weather_tool);
-        rt.upsert_node(taobao_tool.id(),taobao_tool);
-        rt.upsert_node(llm_35.id(),llm_35);
-        rt.upsert_node(agent.id(),agent);
+        rt.upsert_node(weather_tool.id(), weather_tool);
+        rt.upsert_node(taobao_tool.id(), taobao_tool);
+        rt.upsert_node(llm_35.id(), llm_35);
+        rt.upsert_node(agent.id(), agent);
         rt.launch();
 
         let stdin = std::io::stdin().lock();
@@ -220,9 +259,10 @@ mod test{
         print!("User  :-->");
         std::io::stdout().flush().unwrap();
         while let Some(Ok(query)) = stdin.next() {
-            let answer:anyhow::Result<String> = rt.run("test_single_agent", "single_agent", query).await;
-            if let Err(ref e) = answer{
-                println!("error--->{}",e);
+            let answer: anyhow::Result<String> =
+                rt.run("test_single_agent", "single_agent", query).await;
+            if let Err(ref e) = answer {
+                println!("error--->{}", e);
                 return;
             }
             println!("AI    :-->{}", answer.unwrap());

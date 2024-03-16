@@ -1,25 +1,24 @@
+use crate::Memory;
+use async_openai::types::ChatCompletionRequestMessage;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::RwLock;
-use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
 use wd_tools::{PFErr, PFOk};
-use crate::Memory;
 
-#[derive(Default,Debug)]
-pub struct SimpleMemory{
-    list:RwLock<Vec<ChatCompletionRequestMessage>>,
+#[derive(Default, Debug)]
+pub struct SimpleMemory {
+    list: RwLock<Vec<ChatCompletionRequestMessage>>,
 }
 
-
-impl Memory for SimpleMemory{
+impl Memory for SimpleMemory {
     fn load_context(&self, max: usize) -> anyhow::Result<Vec<ChatCompletionRequestMessage>> {
         let read = self.list.read().unwrap();
         let len = read.len();
         if len < max {
             read.deref().clone().ok()
-        }else{
+        } else {
             let mut list = Vec::with_capacity(max);
-            for i in (len - max)..len{
+            for i in (len - max)..len {
                 list.push(read.deref()[i].clone())
             }
             Ok(list)
