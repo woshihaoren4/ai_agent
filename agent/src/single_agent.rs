@@ -1,10 +1,7 @@
-use crate::consts::{
-    callback_self, go_next_or_over, AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER, MULTI_AGENT_RECALL_TOOLS,
-};
+use crate::consts::{callback_self, go_next_or_over, AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER, MULTI_AGENT_RECALL_TOOLS, user_id_from_ctx};
 use crate::llm::LLMNodeRequest;
-use crate::memory::SimpleMemory;
 use crate::tool::AgentTool;
-use crate::Memory;
+use crate::{Memory};
 use async_openai::types::{
     ChatChoice, ChatCompletionMessageToolCall, ChatCompletionRequestAssistantMessageArgs,
     ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionTool,
@@ -13,12 +10,14 @@ use async_openai::types::{
 use rt::{Context, Node, TaskInput, TaskOutput};
 use std::sync::Arc;
 use wd_tools::{PFErr, PFOk};
+use crate::short_long_memory::{ ShortLongMemoryMap};
 
 #[derive(Clone)]
 pub struct SingleAgentNode {
     prompt: String,
     tools: Vec<ChatCompletionTool>,
-    memory: Arc<dyn Memory>,
+    // memory: Arc<dyn EasyMemory>,
+    memory:Arc<dyn Memory>,
 
     id: String,
     max_context_window: usize,
@@ -28,7 +27,8 @@ impl Default for SingleAgentNode {
     fn default() -> Self {
         let prompt = String::new();
         let tools = vec![];
-        let memory = Arc::new(SimpleMemory::default());
+        // let memory = Arc::new(SimpleMemory::default());
+        let memory = Arc::new(ShortLongMemoryMap::default());
         let id = "single_agent".into();
         let max_context_window = 3;
         let llm_model = "gpt-3.5-turbo".into();
@@ -56,6 +56,10 @@ impl SingleAgentNode {
         self.tools.push(tool);
         self
     }
+    // pub fn set_memory(mut self, memory: Arc<dyn EasyMemory>) -> Self {
+    //     self.memory = memory;
+    //     self
+    // }
     pub fn set_memory(mut self, memory: Arc<dyn Memory>) -> Self {
         self.memory = memory;
         self
@@ -70,7 +74,7 @@ impl SingleAgentNode {
             },
         );
     }
-    fn exec_llm(&self, ctx: Arc<Context>) -> anyhow::Result<TaskOutput> {
+    async fn exec_llm(&self, ctx: Arc<Context>) -> anyhow::Result<TaskOutput> {
         let mut context = ctx.get(
             "session_context",
             move |x: Option<&mut Vec<ChatCompletionRequestMessage>>| {
@@ -84,7 +88,8 @@ impl SingleAgentNode {
 
         let mut req = LLMNodeRequest::default();
         req.prompt = self.prompt.clone();
-        req.context = self.memory.load_context(self.max_context_window)?;
+        // req.context = self.memory.load_context(self.max_context_window)?;
+        req.context = self.memory.load_context(user_id_from_ctx(&*ctx).as_str(),self.max_context_window).await?;
         req.context.append(&mut context);
         req.tools.append(&mut self.tools.clone());
         let self_id = self.id();
@@ -105,7 +110,7 @@ impl SingleAgentNode {
         ctx.set(AGENT_EXEC_STATUS, 3usize);
         callback_self(ctx, self.id.clone(), self.llm_model.clone(), req)
     }
-    fn over(&self, ctx: Arc<Context>, msg: String) -> anyhow::Result<TaskOutput> {
+    async fn over(&self, ctx: Arc<Context>, msg: String) -> anyhow::Result<TaskOutput> {
         let user_question = ctx.get(
             "session_context",
             move |x: Option<&mut Vec<ChatCompletionRequestMessage>>| x.unwrap().remove(0),
@@ -116,8 +121,10 @@ impl SingleAgentNode {
                 .build()
                 .unwrap()
                 .into();
-        self.memory
-            .add_session_log(vec![user_question, ai_response]);
+        // self.memory
+        //     .add_session_log(vec![user_question, ai_response]);
+
+        self.memory.add_session_log(user_id_from_ctx(&*ctx).as_str(),vec![user_question, ai_response]).await;
 
         go_next_or_over(ctx, msg)
         // TaskOutput::from_value(msg).over().ok()
@@ -192,14 +199,14 @@ impl Node for SingleAgentNode {
                     Self::add_msg_to_context(ctx.clone(), req);
                 }
 
-                return self.exec_llm(ctx);
+                return self.exec_llm(ctx).await;
             }
             //工具执行结果
             2 => {
                 let resp = args.get_value::<ChatCompletionRequestMessage>().unwrap();
                 println!("tool  :-->{:?}", resp);
                 Self::add_msg_to_context(ctx.clone(), resp);
-                return self.exec_llm(ctx);
+                return self.exec_llm(ctx).await;
             }
             //模型回复
             3 => {
@@ -211,7 +218,7 @@ impl Node for SingleAgentNode {
                 } = resp.choices.remove(0);
                 match finish_reason.unwrap() {
                     FinishReason::Stop => {
-                        return self.over(ctx, message.content.unwrap_or("无语".to_string()))
+                        return self.over(ctx, message.content.unwrap_or("无语".to_string())).await
                     }
                     FinishReason::ToolCalls => {
                         return self.function_call(ctx, message.tool_calls.unwrap().remove(0))

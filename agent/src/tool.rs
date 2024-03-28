@@ -52,6 +52,7 @@ impl ToolNode {
 }
 
 impl ToolNode {
+    #[allow(dead_code)]
     pub(crate) fn mock_get_current_weather() -> Self {
         ToolNode::new(
             "get_current_weather",
@@ -60,6 +61,7 @@ impl ToolNode {
             Self::get_current_weather,
         )
     }
+    #[allow(dead_code)]
     pub(crate) fn mock_taobao() -> Self {
         ToolNode::new(
             "submit_order",
@@ -68,6 +70,7 @@ impl ToolNode {
             Self::submit_order,
         )
     }
+    #[allow(dead_code)]
     fn get_current_weather(
         input: String,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> {
@@ -97,6 +100,7 @@ impl ToolNode {
             }
         })
     }
+    #[allow(dead_code)]
     fn submit_order(input: String) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> {
         Box::pin(async move {
             let val = Value::from_str(input.as_str())?;

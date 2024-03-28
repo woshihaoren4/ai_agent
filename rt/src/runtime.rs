@@ -138,19 +138,22 @@ impl Runtime {
         let result = rtw.await;
         Ok(result)
     }
-    pub async fn run<
+    pub async fn call<
         S: Into<String>,
         F: Into<String>,
         In: Any + Send + Sync + 'static,
         Out: Any + Send + Sync + 'static,
+        CH: FnOnce(Context)->Context,
     >(
         &self,
         task_code: S,
         first_node_id: F,
         input: In,
+        ctx_handle:CH,
     ) -> anyhow::Result<Out> {
         let input = TaskInput::from_value(input);
         let ctx = Context::new(task_code.into());
+        let ctx = ctx_handle(ctx);
 
         let mut output = self.raw_run(ctx, first_node_id.into(), input).await?;
 
@@ -162,6 +165,19 @@ impl Runtime {
             Some(out) => Ok(out),
             None => anyhow::anyhow!("output type reflect failed or not result").err(),
         }
+    }
+    pub async fn run<
+        S: Into<String>,
+        F: Into<String>,
+        In: Any + Send + Sync + 'static,
+        Out: Any + Send + Sync + 'static,
+    >(
+        &self,
+        task_code: S,
+        first_node_id: F,
+        input: In,
+    ) -> anyhow::Result<Out> {
+        self.call(task_code,first_node_id,input,|x|x).await
     }
 
     fn start_result_consumer(self) {

@@ -143,13 +143,15 @@ mod test {
     use rt::{Node, Runtime};
     use std::io::{BufRead, Write};
     use wd_tools::PFArc;
+    use crate::short_long_memory::{ShortLongMemory, ShortLongMemoryMap};
 
     // cargo test multi_agent::test::test_multi_agent -- --nocapture
     #[tokio::test]
     async fn test_multi_agent() {
         let weather_tool = ToolNode::mock_get_current_weather();
         let taobao_tool = ToolNode::mock_taobao();
-        let memory = SimpleMemory::default().arc();
+        // let memory = SimpleMemory::default().arc();
+        let memory = ShortLongMemoryMap::default().arc();
         let llm_35: LLMNode = LLMNode::default();
 
         let info_agent = SingleAgentNode::default()

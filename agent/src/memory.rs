@@ -1,4 +1,4 @@
-use crate::Memory;
+use crate::EasyMemory;
 use async_openai::types::ChatCompletionRequestMessage;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -10,7 +10,7 @@ pub struct SimpleMemory {
     list: RwLock<Vec<ChatCompletionRequestMessage>>,
 }
 
-impl Memory for SimpleMemory {
+impl EasyMemory for SimpleMemory {
     fn load_context(&self, max: usize) -> anyhow::Result<Vec<ChatCompletionRequestMessage>> {
         let read = self.list.read().unwrap();
         let len = read.len();

@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/agent/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/rt/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/example/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/memory/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
