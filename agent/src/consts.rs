@@ -17,6 +17,8 @@ pub const USER_ID:&'static str = "user_id";
 
 pub const MEMORY:&'static str = "memory";
 
+pub const PROMPT:&'static str = "prompt";
+
 pub fn callback_self<T: Any + Send + Sync + 'static>(
     ctx: Arc<Context>,
     id: String,
@@ -70,4 +72,13 @@ pub fn memory_from_ctx_unwrap(ctx:&Context)->Arc<dyn Memory>{
 }
 pub fn memory_to_ctx(ctx:&Context,memory:Arc<dyn Memory>){
     ctx.set(MEMORY,memory);
+}
+
+pub fn prompt_from_ctx(ctx:&Context)->String{
+    ctx.get(PROMPT,|x :Option<&mut String>|{
+        x.map(|s|s.clone()).unwrap_or(String::new())
+    })
+}
+pub fn prompt_to_ctx<S:Into<String>>(ctx:&Context,prompt:S){
+    ctx.set(PROMPT,prompt.into());
 }

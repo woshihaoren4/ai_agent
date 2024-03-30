@@ -1,7 +1,7 @@
 use crate::consts::{callback_self, go_next_or_over, AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER, MULTI_AGENT_RECALL_TOOLS, user_id_from_ctx};
 use crate::llm::LLMNodeRequest;
 use crate::tool::AgentTool;
-use crate::{Memory};
+use crate::{Language, Memory, prompt_from_ctx, prompt_to_ctx, PromptBuilder, PromptCommonTemplate};
 use async_openai::types::{
     ChatChoice, ChatCompletionMessageToolCall, ChatCompletionRequestAssistantMessageArgs,
     ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionTool,
@@ -9,12 +9,12 @@ use async_openai::types::{
 };
 use rt::{Context, Node, TaskInput, TaskOutput};
 use std::sync::Arc;
-use wd_tools::{PFErr, PFOk};
+use wd_tools::{PFArc, PFErr, PFOk};
 use crate::short_long_memory::{ ShortLongMemoryMap};
 
 #[derive(Clone)]
 pub struct SingleAgentNode {
-    prompt: String,
+    prompt: Arc<dyn PromptBuilder>,
     tools: Vec<ChatCompletionTool>,
     // memory: Arc<dyn EasyMemory>,
     memory:Arc<dyn Memory>,
@@ -25,7 +25,7 @@ pub struct SingleAgentNode {
 }
 impl Default for SingleAgentNode {
     fn default() -> Self {
-        let prompt = String::new();
+        let prompt = PromptCommonTemplate::default().arc();
         let tools = vec![];
         // let memory = Arc::new(SimpleMemory::default());
         let memory = Arc::new(ShortLongMemoryMap::default());
@@ -48,8 +48,12 @@ impl SingleAgentNode {
         self.id = id.into();
         self
     }
-    pub fn set_prompt<S: Into<String>>(mut self, pp: S) -> Self {
-        self.prompt = pp.into();
+    // pub fn set_prompt<S: Into<String>>(mut self, pp: S) -> Self {
+    //     self.prompt = pp.into();
+    //     self
+    // }
+    pub fn set_prompt<S: PromptBuilder+'static>(mut self, pb: S) -> Self {
+        self.prompt = Arc::new(pb);
         self
     }
     pub fn add_tool(mut self, tool: ChatCompletionTool) -> Self {
@@ -87,7 +91,7 @@ impl SingleAgentNode {
         );
 
         let mut req = LLMNodeRequest::default();
-        req.prompt = self.prompt.clone();
+        req.prompt = prompt_from_ctx(&*ctx);
         // req.context = self.memory.load_context(self.max_context_window)?;
         req.context = self.memory.load_context(user_id_from_ctx(&*ctx).as_str(),self.max_context_window).await?;
         req.context.append(&mut context);
@@ -190,6 +194,9 @@ impl Node for SingleAgentNode {
 
                 let query = args.get_value::<String>();
                 if let Some(q) = query {
+                    if prompt_from_ctx(&*ctx).is_empty() {
+                        prompt_to_ctx(&*ctx,self.prompt.build(user_id_from_ctx(&*ctx).as_str(),q.as_ref(),Language::Chinese).await);
+                    }
                     let req: ChatCompletionRequestMessage =
                         ChatCompletionRequestUserMessageArgs::default()
                             .content(q)
@@ -240,6 +247,7 @@ mod test {
     use crate::tool::ToolNode;
     use rt::{Node, Runtime};
     use std::io::{BufRead, Write};
+    use crate::PromptCommonTemplate;
 
     // cargo test single_agent::test::test_single_agent -- --nocapture
     #[tokio::test]
@@ -249,7 +257,7 @@ mod test {
         let llm_35: LLMNode = LLMNode::default();
         let pp = "你是一个智能助手，回答要幽默风趣，尽量简洁。";
         let agent = SingleAgentNode::default()
-            .set_prompt(pp)
+            .set_prompt::<PromptCommonTemplate>(PromptCommonTemplate::default().role(pp).into())
             .add_tool(weather_tool.as_openai_tool())
             .add_tool(taobao_tool.as_openai_tool());
 

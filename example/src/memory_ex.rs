@@ -1,10 +1,11 @@
 use std::io::{BufRead, Write};
 use wd_tools::PFArc;
-use agent::{LLMNode, Memory, ShortLongMemoryMap, SingleAgentNode, user_id_to_ctx};
+use agent::{LLMNode, Memory, PromptCommonTemplate, ShortLongMemoryMap, SingleAgentNode, user_id_to_ctx};
 use rt::{Node, Runtime};
 
+#[allow(dead_code)]
 pub async fn ex_long_short_memory(){
-    let uid = "test_uid_001";
+    let uid = "test_uid_003";
     let llm_35: LLMNode = LLMNode::default();
     let pp = "你是一个智能助手，回答要幽默风趣，尽量简洁。\n用户姓名：${name}，年龄:${age}。\n和用户的交互历史：${history}";
     let mut memory = ShortLongMemoryMap::default();
@@ -15,16 +16,16 @@ pub async fn ex_long_short_memory(){
 
     //拼装prompt
     let pp = pp.replace("${name}",memory.get_user_tag(uid,"name").await.unwrap().as_str());
-    let pp = pp.replace("${age}",memory.get_user_tag(uid,"age").await.unwrap().as_str());
-    // let history = memory.recall_summary(uid, "", 1).await.unwrap();
-    // if !history.is_empty() {
-    //     pp = pp.replace("${history}",history[0].as_str());
-    // }else{
-    //     pp = pp.replace("${history}","");
-    // }
+    let mut pp = pp.replace("${age}",memory.get_user_tag(uid,"age").await.unwrap().as_str());
+    let history = memory.recall_summary(uid, "生日", 5).await.unwrap();
+    if !history.is_empty() {
+        pp = pp.replace("${history}",history.join(" \n ").as_str());
+    }else{
+        pp = pp.replace("${history}","");
+    }
 
     let agent = SingleAgentNode::default()
-        .set_prompt(pp.as_str())
+        .set_prompt::<PromptCommonTemplate>(PromptCommonTemplate::default().role(pp.as_str()).into())
         .add_tool(tag_tool.as_openai_tool())
         .add_tool(summery_tool.as_openai_tool())
         .set_memory(memory);

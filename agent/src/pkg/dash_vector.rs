@@ -64,6 +64,7 @@ struct DashVectorRecallRequest {
 struct DashVectorRecallResp{
     code:isize,
     message:String,
+    #[serde(default="Vec::new")]
     output:Vec<RecallItem>,
 }
 #[derive(Debug,Serialize,Deserialize)]
@@ -115,7 +116,6 @@ impl DashVector {
         let filter = format!("uid = '{}'",uid);
         let req = DashVectorRecallRequest{vector:vector.pop().unwrap(),topk,filter};
         self.recall(req).await
-
     }
 
     async fn recall(&self,req:DashVectorRecallRequest)->anyhow::Result<Vec<String>>{

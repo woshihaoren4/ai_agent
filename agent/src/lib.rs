@@ -10,6 +10,7 @@ mod single_agent;
 mod tool;
 pub mod short_long_memory;
 pub mod pkg;
+mod prompt;
 
 pub use consts::*;
 pub use infra::*;
@@ -20,6 +21,7 @@ pub use single_agent::*;
 pub use tool::*;
 pub use short_long_memory::*;
 pub use pkg::*;
+pub use prompt::*;
 
 pub trait EasyMemory: Send + Sync {
     fn load_context(&self, max: usize) -> anyhow::Result<Vec<ChatCompletionRequestMessage>>;
@@ -45,15 +47,16 @@ pub trait Memory: Send + Sync{
     async fn summary_history(&self,user:&str);
 }
 
-
-
+#[async_trait::async_trait]
+pub trait PromptBuilder:Send+Sync {
+    async fn build(&self,uid:&str,query: &str,lg:Language)->String;
+}
 
 #[cfg(test)]
 mod test {
-    use async_openai::types::{ChatCompletionFunctionsArgs, ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs, ChatCompletionToolArgs, ChatCompletionToolType, CreateChatCompletionRequestArgs, FunctionObject, FunctionObjectArgs};
+    use async_openai::types::{ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs};
     use async_openai::Client;
-    use serde_json::json;
-    use crate::tool::ToolNode;
+
 
     #[tokio::test]
     async fn test_openai() {
