@@ -16,5 +16,6 @@ tokio.workspace = true
 anyhow.workspace = true
 wd_tools.workspace = true
 wd_log.workspace = true
+async-openai.workspace = true
 rt = {path = "../rt",version = "0.1"}
 agent = {path = "../agent",version = "0.1"}

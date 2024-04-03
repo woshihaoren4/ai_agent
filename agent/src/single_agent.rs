@@ -60,6 +60,10 @@ impl SingleAgentNode {
         self.tools.push(tool);
         self
     }
+    pub fn set_llm<S:Into<String>>(mut self, llm: S) -> Self {
+        self.llm_model = llm.into();
+        self
+    }
     // pub fn set_memory(mut self, memory: Arc<dyn EasyMemory>) -> Self {
     //     self.memory = memory;
     //     self

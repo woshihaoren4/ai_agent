@@ -52,6 +52,13 @@ pub trait PromptBuilder:Send+Sync {
     async fn build(&self,uid:&str,query: &str,lg:Language)->String;
 }
 
+#[async_trait::async_trait]
+impl PromptBuilder for String{
+    async fn build(&self, _uid: &str, _query: &str, _lg: Language) -> String {
+        self.clone()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use async_openai::types::{ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs};

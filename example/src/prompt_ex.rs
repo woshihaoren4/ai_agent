@@ -3,10 +3,8 @@ use wd_tools::PFArc;
 use agent::{LLMNode, PromptCommonTemplate, ShortLongMemoryMap, SingleAgentNode, user_id_to_ctx};
 use rt::{Node, Runtime};
 
+#[allow(dead_code)]
 pub async fn ex_prompt_common(){
-
-
-
     let uid = "test_uid_101";
     let llm_35: LLMNode = LLMNode::default();
     let mut memory = ShortLongMemoryMap::default();
