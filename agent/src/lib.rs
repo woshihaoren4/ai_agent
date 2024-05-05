@@ -11,6 +11,7 @@ mod tool;
 pub mod short_long_memory;
 pub mod pkg;
 mod prompt;
+mod text_to_image;
 
 pub use consts::*;
 pub use infra::*;
@@ -22,6 +23,7 @@ pub use tool::*;
 pub use short_long_memory::*;
 pub use pkg::*;
 pub use prompt::*;
+pub use text_to_image::*;
 
 pub trait EasyMemory: Send + Sync {
     fn load_context(&self, max: usize) -> anyhow::Result<Vec<ChatCompletionRequestMessage>>;

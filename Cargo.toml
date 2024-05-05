@@ -1,11 +1,11 @@
 [workspace]
-members = ["agent", "example", "rt"]
+members = ["agent", "example", "rt", "rtv2"]
 
 [workspace.package]
 edition = "2021"
 authors = ["Teshin <1443965173@qq.com>"]
 repository = "https://github.com/woshihaoren4/rush"
-keywords = ["agent-rt"]
+keywords = ["agent-rt-ws"]
 description = "agent scheduling"
 license = "MIT"
 readme = "README.md"
