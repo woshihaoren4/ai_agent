@@ -8,6 +8,8 @@ pub enum RTError{
     RuntimeDisable,
     UnknownNodeId(String),
     FlowLastNodeNil,
+
+    UNKNOWN(String),
 }
 impl RTError{
     pub fn anyhow<T>(self)->anyhow::Result<T>{
@@ -35,6 +37,9 @@ impl Display for RTError {
             }
             RTError::ContextStatusAbnormal(s)=>{
                 write!(f,"ctx status abnormal:{}",s)
+            }
+            RTError::UNKNOWN(s) => {
+                write!(f,"{}",s)
             }
         }
     }

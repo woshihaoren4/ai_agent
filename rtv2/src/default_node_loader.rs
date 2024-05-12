@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, RwLock};
 use crate::{Service, ServiceLoader};
 

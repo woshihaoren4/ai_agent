@@ -1,21 +1,29 @@
 use std::any::Any;
 
-const ARGS_DEFAULT:&'static str = "";
-
 #[derive(Debug, Default)]
 pub struct Input {
     input: String,
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug)]
 pub struct Output {
-    any: Box<dyn Any>,
+    pub raw_to_ctx:bool,
+    pub any: Box<dyn Any + Send + Sync + 'static>,
+}
+impl Default for Output{
+    fn default() -> Self {
+        let raw_to_ctx = false;
+        Self{ raw_to_ctx,any:Box::new(())}
+    }
 }
 impl Output{
     pub fn null()->Self{
         Self::new(())
     }
-    pub fn new<T:Any>(t:T)->Self{
-        Output{any:Box::new(t)}
+    pub fn new<T:Any+ Send + Sync + 'static>(t:T)->Self{
+        Output{any:Box::new(t),..Default::default()}
+    }
+    pub fn raw_to_ctx(mut self)-> Self{
+        self.raw_to_ctx = true;self
     }
 }
