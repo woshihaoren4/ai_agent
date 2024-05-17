@@ -2,7 +2,7 @@ use crate::default_node_loader::DefaultNodeLoader;
 use crate::default_waker_pool::DefaultWakerPool;
 use crate::{
     Context, CtxStatus, Flow, NextNodeResult, Output, Plan, RTError, Service, ServiceFn,
-    ServiceLoader, WakerCallBack, WakerWaitPool, END_ABNORMAL_END, END_NODE_CODE, START_NODE_CODE,
+    ServiceLoader, WakerCallBack, WakerWaitPool, START_NODE_CODE,
 };
 use std::any::Any;
 use std::collections::VecDeque;

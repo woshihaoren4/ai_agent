@@ -2,7 +2,6 @@ use crate::{Context, Flow, Output, Runtime, Service};
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::marker::PhantomData;
-use std::pin::Pin;
 use std::sync::Arc;
 use wd_tools::{PFErr, PFOk};
 
@@ -68,10 +67,22 @@ where
     }
 }
 
-impl<T, In, Out, Fut> From<T> for LayerJson<LayerJsonFn<T, In, Out, Fut>, In, Out> {
+impl<T, In, Out, Fut> From<T> for LayerJson<LayerJsonFn<T, In, Out, Fut>, In, Out>
+where
+    T: Fn(String, Arc<Context>, In) -> Fut,
+{
     fn from(value: T) -> Self {
         let json_fn = LayerJsonFn::new(value);
         Self::new(json_fn)
+    }
+}
+
+impl<T, In, Out> From<T> for LayerJson<T, In, Out>
+where
+    T: ServiceLayer<Config = In, Output = Out>,
+{
+    fn from(value: T) -> Self {
+        Self::new(value)
     }
 }
 
@@ -180,6 +191,7 @@ mod test {
     pub async fn test_layer_json() {
         let rt = Runtime::default()
             .register_service("layer_test", LayerJson::new(LayerTest {}))
+            .register_service_layer("layer", LayerTest {})
             .register_service_layer("layer_fn", service_layer_fn_show)
             .register_service_layer(
                 "lambda_fn",

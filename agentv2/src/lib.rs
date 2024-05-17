@@ -6,7 +6,5 @@ pub use openai_llm::*;
 mod tests {
 
     #[test]
-    fn it_works() {
-
-    }
+    fn it_works() {}
 }

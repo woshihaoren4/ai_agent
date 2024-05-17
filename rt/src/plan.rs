@@ -165,6 +165,9 @@ impl PlanBuilder {
             .collect::<Vec<String>>();
         self.insert_node((ready_codes, node.into(), vec![]))
     }
+    pub fn single_node<T: Into<String>, C: Into<String>>(node_type_id: T, cfg: C) -> Self {
+        Self::start((END_NODE_CODE, node_type_id.into(), cfg.into()), vec![""])
+    }
 
     pub fn check(&self, code: &str, count: &mut i32) -> anyhow::Result<()> {
         if *count > 1000 {
@@ -223,11 +226,13 @@ impl PlanBuilder {
     }
 }
 
-impl<S> From<(S, S, S)> for Node
+impl<S1, S2, S3> From<(S1, S2, S3)> for Node
 where
-    S: Into<String>,
+    S1: Into<String>,
+    S2: Into<String>,
+    S3: Into<String>,
 {
-    fn from((code, id, cfg): (S, S, S)) -> Self {
+    fn from((code, id, cfg): (S1, S2, S3)) -> Self {
         Node {
             code: code.into(),
             node_type_id: id.into(),
@@ -235,11 +240,12 @@ where
         }
     }
 }
-impl<S> From<(S, S)> for Node
+impl<S1, S2> From<(S1, S2)> for Node
 where
-    S: Into<String>,
+    S1: Into<String>,
+    S2: Into<String>,
 {
-    fn from((code, id): (S, S)) -> Self {
+    fn from((code, id): (S1, S2)) -> Self {
         Node {
             code: code.into(),
             node_type_id: id.into(),

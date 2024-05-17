@@ -1,6 +1,4 @@
-use crate::{
-    Node, Output, Plan, RTError, Runtime, Service, ServiceLoader, END_NODE_CODE, END_RESULT_ERROR,
-};
+use crate::{Node, Output, Plan, RTError, Runtime, Service, END_NODE_CODE, END_RESULT_ERROR};
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 use std::error::Error;
@@ -135,6 +133,26 @@ impl Context {
     pub fn set<S: Into<String>, V: Any + Send + Sync>(&self, key: S, value: V) {
         let mut lock = self.extend.lock().unwrap();
         lock.insert(key.into(), Box::new(value));
+    }
+    pub fn exist(&self, key: &str) -> bool {
+        let lock = self.extend.lock().unwrap();
+        lock.contains_key(key)
+    }
+    pub fn get_opt<In: 'static, Out, F: FnOnce(Option<&mut In>) -> Out>(
+        &self,
+        key: &str,
+        function: F,
+    ) -> Out {
+        let mut lock = self.extend.lock().unwrap();
+        let val = match lock.get_mut(key) {
+            Some(o) => o,
+            None => return function(None),
+        };
+        let input = match val.downcast_mut::<In>() {
+            Some(o) => o,
+            None => return function(None),
+        };
+        return function(Some(input));
     }
     pub fn get<In: 'static, Out, F: FnOnce(&mut In) -> Out>(
         &self,
