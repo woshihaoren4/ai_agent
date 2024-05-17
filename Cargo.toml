@@ -1,5 +1,5 @@
 [workspace]
-members = ["agent", "example", "rt", "rtv2"]
+members = ["agentv2", "example", "rt"]
 
 [workspace.package]
 edition = "2021"
@@ -17,7 +17,7 @@ serde = {version = "1.0.188",features = ["derive"]}
 serde_json = "1.0.105"
 tokio = {version = "1",features = ["full"]}
 async-channel = "2.2.0"
-wd_log = "0.2.0"
+wd_log = "0.3.0"
 async-trait = "0.1.77"
 async-openai = "0.19.0"
 lazy_static = "1.4.0"

@@ -1,5 +1,5 @@
 [package]
-name = "rtv2"
+name = "agentv2"
 version = "0.1.0"
 edition.workspace = true
 authors.workspace = true
@@ -12,11 +12,13 @@ readme.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+wd_log.workspace = true
+wd_tools.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
-wd_tools.workspace = true
 async-channel.workspace = true
-wd_log.workspace = true
 async-trait.workspace = true
 serde.workspace = true
+async-openai.workspace = true
+rt = {path = "../rt",version = "0.2"}

@@ -2,9 +2,10 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use wd_tools::PFErr;
 
-#[derive(Debug)]
+#[derive(Debug,Eq,PartialEq)]
 pub enum RTError{
     ContextStatusAbnormal(String),
+    ContextAbort,
     RuntimeDisable,
     UnknownNodeId(String),
     FlowLastNodeNil,
@@ -37,6 +38,9 @@ impl Display for RTError {
             }
             RTError::ContextStatusAbnormal(s)=>{
                 write!(f,"ctx status abnormal:{}",s)
+            }
+            RTError::ContextAbort=>{
+                write!(f,"context abort running")
             }
             RTError::UNKNOWN(s) => {
                 write!(f,"{}",s)

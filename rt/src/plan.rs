@@ -5,7 +5,7 @@ use wd_tools::{PFErr, PFOk};
 use crate::{Context, END_NODE_CODE, NextNodeResult, START_NODE_CODE, Plan};
 
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Default)]
 pub struct Node{
     pub code:String,       //当前节点的编码
     pub node_type_id:String, //类型节点id
@@ -59,15 +59,30 @@ impl LockPlan {
     }
 }
 
-
 impl PlanBuilder{
     pub fn start<N:Into<Node>,S:Into<String>>(node:N,next_nodes:Vec<S>)->Self{
         let node = node.into();
         let mut map = HashMap::new();
         let go = next_nodes.into_iter().map(|x| x.into()).collect::<Vec<String>>();
+
+        let first_node_code = node.code.clone();
+        let start = (Node::default(),vec![first_node_code.clone()]).into();
         let plan = (node,go).into();
-        map.insert(START_NODE_CODE.to_string(),plan);
+
+        map.insert(START_NODE_CODE.to_string(),start);
+        map.insert(first_node_code,plan);
         Self{map}
+    }
+    pub fn start_new_branch<N:Into<Node>,S:Into<String>>(&mut self,node:N,next_nodes:Vec<S>)->&mut Self{
+        let node = node.into();
+        let code = node.code.clone();
+        if let Some(s) = self.map.get_mut(START_NODE_CODE){
+            s.go.push(code.clone());
+        }
+        let go = next_nodes.into_iter().map(|x|x.into()).collect::<Vec<String>>();
+        let plan = (node,go).into();
+        self.map.insert(code,plan);
+        self
     }
     pub fn insert_node<N:Into<PlanNode>>(&mut self, node:N) ->&mut Self{
         let node = node.into();
@@ -131,12 +146,15 @@ impl PlanBuilder{
         };
         Ok(())
     }
+    pub fn build(&mut self)->LockPlan{
+        let map = std::mem::take(&mut self.map);
+        let map =Mutex::new(map);
+        LockPlan{map}
+    }
     pub fn check_and_build(&mut self)->anyhow::Result<LockPlan>{
         let mut index = 0;
         self.check(START_NODE_CODE,&mut index)?;
-        let map = std::mem::take(&mut self.map);
-        let map =Mutex::new(map);
-        LockPlan {map}.ok()
+        self.build().ok()
     }
     pub fn string(&self)->String{
         let mut res = String::new();

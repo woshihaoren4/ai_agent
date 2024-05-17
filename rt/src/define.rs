@@ -7,7 +7,8 @@ use crate::{Flow, Node, Output, PlanNode};
 
 pub const START_NODE_CODE:&'static str = "start";
 pub const END_NODE_CODE:&'static str = "end";
-pub const END_RESULT_ERROR:&'static str = "rt_end_result_error";
+pub const END_RESULT_ERROR:&'static str = "xxx_rt_end_result_error";
+pub const END_ABNORMAL_END:&'static str = "xxx_rt_end_abnormal_end";
 
 #[async_trait::async_trait]
 pub trait Service: Send + Sync {

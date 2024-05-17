@@ -17,5 +17,5 @@ anyhow.workspace = true
 wd_tools.workspace = true
 wd_log.workspace = true
 async-openai.workspace = true
-rt = {path = "../rt",version = "0.1"}
+rt = {path = "../rt",version = "0.2"}
 agent = {path = "../agent",version = "0.1"}
