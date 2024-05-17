@@ -154,7 +154,7 @@ impl Runtime {
 
 #[cfg(test)]
 mod test {
-    use crate::{Context, LayerJson, Output, PlanBuilder, Runtime, ServiceLayer, END_NODE_CODE};
+    use crate::{Context, LayerJson, PlanBuilder, Runtime, ServiceLayer, END_NODE_CODE};
     use serde_json::Value;
     use std::sync::Arc;
     use wd_tools::{PFArc, PFOk};
@@ -169,7 +169,7 @@ mod test {
         async fn call(
             &self,
             _: String,
-            ctx: Arc<Context>,
+            _ctx: Arc<Context>,
             cfg: Self::Config,
         ) -> anyhow::Result<Self::Output> {
             println!("config ---> {}", cfg);
@@ -179,7 +179,7 @@ mod test {
 
     async fn service_layer_fn_show(
         _: String,
-        ctx: Arc<Context>,
+        _ctx: Arc<Context>,
         cfg: Value,
     ) -> anyhow::Result<Value> {
         println!("async fn config ---> {}", cfg);
@@ -195,7 +195,7 @@ mod test {
             .register_service_layer("layer_fn", service_layer_fn_show)
             .register_service_layer(
                 "lambda_fn",
-                |code: String, ctx: Arc<Context>, _: Value| async move {
+                |code: String, _ctx: Arc<Context>, _: Value| async move {
                     println!("lambda_fn code ---> {}", code);
                     Value::String("lambda success".into()).ok()
                 },

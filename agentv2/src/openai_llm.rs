@@ -50,12 +50,12 @@ impl LLMNodeRequest {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize)]
+#[derive(Debug, Default, Clone,Deserialize, Serialize)]
 pub struct LLMNodeResponse {
     pub answer: Option<String>,
     pub tools: Option<Vec<LLMNodeTools>>,
 }
-#[derive(Debug, Default, Clone, Serialize)]
+#[derive(Debug, Default, Clone,Deserialize, Serialize)]
 pub struct LLMNodeTools {
     pub id: Option<String>,
     pub name: String,
@@ -246,15 +246,16 @@ impl rt::ServiceLayer for OpenaiLLM {
 
 #[cfg(test)]
 mod test {
-    use crate::OpenaiLLM;
+    use crate::{LLMNodeResponse, OpenaiLLM};
     use rt::{CtxStatus, PlanBuilder, Runtime};
     use std::io::{BufRead, Write};
     use std::time::Duration;
+    use serde_json::Value;
     use wd_tools::PFArc;
 
-    //cargo test openai_llm::test::test_llm_node_call -- --nocapture
+    //cargo test openai_llm::test::test_llm_node_chat -- --nocapture
     #[tokio::test]
-    async fn test_llm_node_call() {
+    async fn test_llm_node_chat() {
         let rt = Runtime::default()
             .register_service_layer("openai_llm", OpenaiLLM::default())
             .launch();
@@ -264,7 +265,41 @@ mod test {
         print!("user --->");
         std::io::stdout().flush().unwrap();
         while let Some(Ok(query)) = stdin.next() {
-            print!("\nai   --->");
+            print!("ai   --->");
+            std::io::stdout().flush().unwrap();
+
+            let msg = format!("{{\"prompt\":\"你是一个智能助手\" ,\"query\":\"{query}\"}} ");
+            let resp = rt
+                .ctx(
+                    "test001",
+                    PlanBuilder::single_node("openai_llm", msg)
+                        .check_and_build()
+                        .unwrap(),
+                )
+                // .updates(OpenaiLLM::set_channel_to_ctx)
+                .arc()
+                .block_on::<Value>().await
+                .unwrap();
+            let resp = serde_json::from_value::<LLMNodeResponse>(resp).unwrap();
+
+            print!("{}\nuser --->",resp.answer.unwrap_or("".into()));
+            std::io::stdout().flush().unwrap();
+        }
+    }
+
+    //cargo test openai_llm::test::test_llm_node_stream -- --nocapture
+    #[tokio::test]
+    async fn test_llm_node_stream() {
+        let rt = Runtime::default()
+            .register_service_layer("openai_llm", OpenaiLLM::default())
+            .launch();
+        let stdin = std::io::stdin().lock();
+        let mut stdin = stdin.lines();
+
+        print!("user --->");
+        std::io::stdout().flush().unwrap();
+        while let Some(Ok(query)) = stdin.next() {
+            print!("ai   --->");
             std::io::stdout().flush().unwrap();
 
             let msg = format!("{{\"prompt\":\"你是一个智能助手\" ,\"query\":\"{query}\"}} ");
