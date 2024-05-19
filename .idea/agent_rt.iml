@@ -3,10 +3,10 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/agent/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/rt/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/rt/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/example/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/memory/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/agent_rt/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/agent_rt/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/agent_rt/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/agentv2/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />

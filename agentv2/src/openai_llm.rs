@@ -6,7 +6,7 @@ use async_openai::types::{
 };
 use async_openai::Client;
 use futures::StreamExt;
-use rt::Context;
+use agent_rt::Context;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::Arc;
