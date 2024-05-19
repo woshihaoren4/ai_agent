@@ -1,291 +1,204 @@
-use crate::default_callback_set::DefaultCallbackSet;
-use crate::rwmap_node_loader::RWMapNodeLoader;
-use crate::{CallBack, CallBackSet, Context, Node, NodeLoader, Task, TaskInput, TaskOutput};
-use async_channel::{Receiver, Sender};
+use crate::default_node_loader::DefaultNodeLoader;
+use crate::default_waker_pool::DefaultWakerPool;
+use crate::{
+    Context, CtxStatus, Flow, NextNodeResult, Output, Plan, RTError, Service, ServiceFn,
+    ServiceLoader, WakerCallBack, WakerWaitPool, START_NODE_CODE,
+};
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::future::Future;
-use std::ops::DerefMut;
+use std::marker::PhantomData;
+use std::ops::Deref;
 use std::pin::Pin;
-use std::ptr::replace;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::task::Poll;
 use wd_tools::{PFArc, PFErr};
 
+#[derive(Clone)]
 pub struct Runtime {
-    status: Arc<AtomicUsize>, // 1:await 2:running 3:quiting 4:dead
-    nodes: Arc<dyn NodeLoader>,
-    task_chan: Option<Sender<Task>>,
-    result_chan: Option<Receiver<TaskOutput>>,
-    callback: Arc<dyn CallBackSet>,
-    // receiver_msg:
-}
-pub struct RuntimeWait {
-    code: String,
-    callback: Arc<dyn CallBackSet>,
-    output: Arc<Mutex<Option<TaskOutput>>>,
-}
-
-impl RuntimeWait {
-    pub fn new(
-        code: String,
-        callback: Arc<dyn CallBackSet>,
-        output: Arc<Mutex<Option<TaskOutput>>>,
-    ) -> Self {
-        RuntimeWait {
-            code,
-            callback,
-            output,
-        }
-    }
-}
-
-impl Future for RuntimeWait {
-    type Output = TaskOutput;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        let mut lock = self.output.lock().unwrap();
-        if lock.is_none() {
-            let waker = cx.waker().clone();
-            self.callback.push(self.code.clone(), CallBack::new(waker));
-            return Poll::Pending;
-        }
-        let opt = unsafe { replace(lock.deref_mut(), None) };
-        let output = opt.unwrap();
-        return Poll::Ready(output);
-    }
-}
-impl Clone for Runtime {
-    fn clone(&self) -> Self {
-        let task_chan = if let Some(ref s) = self.task_chan {
-            Some(s.clone())
-        } else {
-            None
-        };
-        let result_chan = if let Some(ref s) = self.result_chan {
-            Some(s.clone())
-        } else {
-            None
-        };
-        Runtime {
-            status: self.status.clone(),
-            nodes: self.nodes.clone(),
-            task_chan,
-            result_chan,
-            callback: self.callback.clone(),
-        }
-    }
+    pub(crate) status: Arc<AtomicUsize>, // 1:await 2:running 3:quiting 4:dead
+    //先注册的先执行
+    pub(crate) middle: VecDeque<Arc<dyn Service>>,
+    pub(crate) nodes: Arc<dyn ServiceLoader>,
+    pub(crate) waker: Arc<dyn WakerWaitPool>,
 }
 
 impl Runtime {
-    pub fn new() -> Self {
+    pub fn new<SL: ServiceLoader + 'static, W: WakerWaitPool + 'static>(sl: SL, waker: W) -> Self {
         let status = AtomicUsize::new(1).arc();
-        let nodes = RWMapNodeLoader::default().arc();
-        let task_chan = None;
-        let result_chan = None;
-        let callback = DefaultCallbackSet::default().arc();
+        let middle = VecDeque::default();
+        let nodes = Arc::new(sl);
+        let waker = Arc::new(waker);
         Self {
             status,
+            middle,
             nodes,
-            task_chan,
-            result_chan,
-            callback,
+            waker,
         }
     }
-    pub fn upsert_node<N: Node + 'static>(&mut self, id: String, n: N) {
-        self.nodes.set(vec![(id, Arc::new(n))]);
+    pub fn register_middle<Mid: Service + 'static>(mut self, service: Mid) -> Self {
+        self.middle.push_back(service.arc());
+        self
     }
-
-    pub fn launch(&mut self) {
-        let rt = self.clone();
-        let (task_sender, task_receiver) = async_channel::bounded(1024);
-        let (result_sender, result_receiver) = async_channel::bounded(1024);
-
-        self.task_chan = Some(task_sender.clone());
-        self.result_chan = Some(result_receiver.clone());
-        tokio::spawn(async {
-            rt.start_work(task_receiver, task_sender, result_sender)
-                .await;
-        });
-        let rt = self.clone();
-        rt.start_result_consumer();
-        self.status.store(1, Ordering::Relaxed);
-    }
-    pub async fn raw_run(
-        &self,
-        mut ctx: Context,
-        first_node_id: String,
-        input: TaskInput,
-    ) -> anyhow::Result<TaskOutput> {
-        let status = self.status.load(Ordering::Relaxed);
-        if self.status.load(Ordering::Relaxed) != 1 {
-            return anyhow::anyhow!("Runtime status[{}] not running", status).err();
-        }
-        let output = Arc::new(Mutex::new(None));
-        ctx.set_output(output.clone());
-        let ctx = Arc::new(ctx);
-        let code = ctx.code.clone();
-        let task = Task::new(ctx, "".into(), first_node_id, Box::new(Some(true))).set_input(input);
-        let rtw = RuntimeWait::new(code, self.callback.clone(), output);
-
-        if let Some(ref s) = self.task_chan {
-            s.send(task).await?;
-        } else {
-            return anyhow::anyhow!("task chan is null").err();
-        };
-
-        let result = rtw.await;
-        Ok(result)
-    }
-    pub async fn call<
-        S: Into<String>,
-        F: Into<String>,
-        In: Any + Send + Sync + 'static,
-        Out: Any + Send + Sync + 'static,
-        CH: FnOnce(Context)->Context,
+    pub fn register_middle_fn<
+        T: Future<Output = anyhow::Result<Output>> + Send + 'static,
+        F: Fn(Flow) -> T + Send + Sync + 'static,
     >(
-        &self,
-        task_code: S,
-        first_node_id: F,
-        input: In,
-        ctx_handle:CH,
-    ) -> anyhow::Result<Out> {
-        let input = TaskInput::from_value(input);
-        let ctx = Context::new(task_code.into());
-        let ctx = ctx_handle(ctx);
-
-        let mut output = self.raw_run(ctx, first_node_id.into(), input).await?;
-
-        if let Some(e) = output.error {
-            return anyhow::anyhow!("run error:{}", e).err();
-        }
-
-        match output.get_value() {
-            Some(out) => Ok(out),
-            None => anyhow::anyhow!("output type reflect failed or not result").err(),
-        }
-    }
-    pub async fn run<
-        S: Into<String>,
-        F: Into<String>,
-        In: Any + Send + Sync + 'static,
-        Out: Any + Send + Sync + 'static,
-    >(
-        &self,
-        task_code: S,
-        first_node_id: F,
-        input: In,
-    ) -> anyhow::Result<Out> {
-        self.call(task_code,first_node_id,input,|x|x).await
-    }
-
-    fn start_result_consumer(self) {
-        let Runtime {
-            // status,
-            // nodes,
-            // task_chan,
-            result_chan,
-            // callback,
-            ..
-        } = self;
-        tokio::spawn(async move {
-            let result_chan = result_chan.unwrap();
-            while let Ok(output) = result_chan.recv().await {
-                let code = output.ctx.clone();
-                output.into_output();
-                if let Some(call) = self.callback.remove(code.code.as_str()) {
-                    call.waker.wake_by_ref();
-                } else {
-                    wd_log::log_field("error", "not find task waker")
-                        .field("task_flow_code", code.code.as_str())
-                        .info("not find");
-                }
-            }
-        });
-    }
-
-    async fn start_work(
         self,
-        receiver: Receiver<Task>,
-        task_sender: Sender<Task>,
-        result_chan: Sender<TaskOutput>,
-    ) {
-        let mut task_set = HashMap::<String, Task>::new(); //fixme 需要做超时处理
-        let node_loader = self.nodes.clone();
-        while let Ok(s) = receiver.recv().await {
-            //先看是否已经有节点执行过task了
-            let task = if let Some(mut t) = task_set.remove(s.node_id.as_str()) {
-                t.input.append(s.input);
-                t
-            } else {
-                s
-            };
-
-            let id = task.node_id.clone();
-            let node = match node_loader.get(id.as_str()) {
-                Ok(o) => o,
-                Err(e) => {
-                    let mut output = TaskOutput::error(e);
-                    output.set_ctx(task.ctx);
-                    if let Err(e) = result_chan.send(output).await {
-                        wd_log::log_field("error", e)
-                            .error("get node failed,send to result_chan channel failed");
-                    }
-                    continue;
-                }
-            };
-
-            if !node.ready(task.ctx.clone(), &task.input) {
-                task_set.insert(task.node_id.clone(), task);
-                continue;
-            }
-            self.async_run_task(task, node, task_sender.clone(), result_chan.clone());
-        }
+        service: F,
+    ) -> Self {
+        self.register_middle(ServiceFn::new(service))
     }
-    fn async_run_task(
-        &self,
-        task: Task,
-        node: Arc<dyn Node>,
-        task_chan: Sender<Task>,
-        result_chan: Sender<TaskOutput>,
-    ) {
-        let Task {
+    pub fn register_service<ID: Into<String>, S: Service + 'static>(
+        self,
+        id: ID,
+        service: S,
+    ) -> Self {
+        self.nodes.set(vec![(id.into(), Arc::new(service))]);
+        self
+    }
+    pub fn register_service_fn<
+        ID: Into<String>,
+        T: Future<Output = anyhow::Result<Output>> + Send + Sync + 'static,
+        F: Fn(Flow) -> T + Send + Sync + 'static,
+    >(
+        self,
+        id: ID,
+        service: F,
+    ) -> Self {
+        self.register_service(id.into(), ServiceFn::new(service))
+    }
+    pub fn launch(self) -> Arc<Self> {
+        self.status.store(2, Ordering::Relaxed);
+        self.arc()
+    }
+    pub fn stop(&self) {
+        self.status.store(3, Ordering::Relaxed);
+    }
+    pub fn is_running(&self) -> bool {
+        self.status.load(Ordering::Relaxed) == 2
+    }
+
+    pub fn check(&self, ctx: &Context) -> anyhow::Result<()> {
+        //检查状态
+        if !self.is_running() {
+            return RTError::RuntimeDisable.anyhow();
+        }
+        if ctx.status() != CtxStatus::INIT {
+            return RTError::ContextStatusAbnormal("ctx status is not init".into()).anyhow();
+        }
+        //todo 任务统计
+        Ok(())
+    }
+    pub fn spawn(&self, ctx: Arc<Context>) -> anyhow::Result<()> {
+        self.check(&ctx)?;
+        //修改ctx状态
+        ctx.set_status(CtxStatus::RUNNING);
+        //执行
+        Runtime::exec_next_node(ctx, START_NODE_CODE);
+        Ok(())
+    }
+    pub async fn block_on<Out: Any>(&self, ctx: Arc<Context>) -> anyhow::Result<Out> {
+        self.check(&ctx)?;
+        let rt_wait = RuntimeWait::<Out> {
             ctx,
-            node_id,
-            input,
-        } = task;
-        tokio::spawn(async move {
-            let result = node.go(ctx.clone(), input).await;
-            let mut output = match result {
-                Ok(o) => o,
-                Err(e) => {
-                    let mut output = TaskOutput::error(e);
-                    output.set_ctx(ctx);
-                    if let Err(e) = result_chan.send(output).await {
-                        wd_log::log_field("error", e)
-                            .error("node run failed, send to result_chan channel failed");
-                    }
+            _out: Default::default(),
+        };
+        rt_wait.await
+    }
+    fn exec_next_node(ctx: Arc<Context>, node_code: &str) {
+        let result = ctx.plan.next(ctx.clone(), node_code);
+        let nodes = match result {
+            NextNodeResult::Over | NextNodeResult::Wait => return,
+            NextNodeResult::Error(e) => {
+                ctx.error_over(RTError::UNKNOWN(e));
+                return;
+            }
+            NextNodeResult::Nodes(s) => s,
+        };
+        for i in nodes {
+            let mut middle = ctx.runtime.middle.clone();
+            match ctx.runtime.nodes.get(i.node_type_id.as_str()) {
+                None => {
+                    let err = RTError::UnknownNodeId(i.node_type_id);
+                    ctx.error_over(err);
                     return;
                 }
+                Some(n) => middle.push_back(n),
             };
-            if output.over || output.error.is_some() {
-                output.set_ctx(ctx.clone());
-                if let Err(e) = result_chan.send(output).await {
-                    wd_log::log_field("error", e)
-                        .error("node over, send to result_chan channel failed");
+
+            let flow = Flow::new(i, ctx.clone(), middle);
+            let this_node_code = node_code.to_string();
+
+            tokio::spawn(async move {
+                let code = flow.code.clone();
+                let ctx = flow.ctx.clone();
+
+                let parent_ctx_code = ctx.parent_code.clone().unwrap_or("".into());
+                ctx.push_stack_info(parent_ctx_code, this_node_code, flow.code.clone());
+
+                if let Err(e) = flow.call().await {
+                    //检查是否强制终止
+                    if let Some(e) = e.downcast_ref::<RTError>() {
+                        if *e == RTError::ContextAbort {
+                            return;
+                        }
+                    }
+                    //否则为异常错误
+                    wd_log::log_error_ln!("Runtime.exec_next_node:Unanticipated errors:{}", e);
+                    ctx.error_over(e.deref());
+                } else {
+                    Runtime::exec_next_node(ctx, code.as_str());
                 }
-                return;
+            });
+        }
+    }
+    pub fn ctx<C: Into<String>, P: Plan + 'static>(self: &Arc<Self>, code: C, plan: P) -> Context {
+        Context::new(code, plan, self.clone())
+    }
+}
+
+impl Default for Runtime {
+    fn default() -> Self {
+        let sl = DefaultNodeLoader::default();
+        let wwp = DefaultWakerPool::default();
+        Runtime::new(sl, wwp).register_default_middle_handles()
+    }
+}
+
+#[derive(Clone)]
+pub struct RuntimeWait<O> {
+    ctx: Arc<Context>,
+    _out: PhantomData<O>,
+}
+
+impl<O: Any> Future for RuntimeWait<O> {
+    type Output = anyhow::Result<O>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        match self.ctx.status() {
+            CtxStatus::INIT => {
+                //先添加回调任务
+                let waker = cx.waker().clone();
+                let code = self.ctx.code.clone();
+                let waker = WakerCallBack { waker };
+                self.ctx.runtime.waker.push(code, waker);
+                //再执行任务
+                self.ctx.set_status(CtxStatus::RUNNING);
+                Runtime::exec_next_node(self.ctx.clone(), START_NODE_CODE);
+
+                return Poll::Pending;
             }
-            for (id, val) in output.result {
-                ctx.add_task_to_chain(node_id.as_str(), id.as_str());
-                let task = Task::new(ctx.clone(), node_id.clone(), id, val);
-                if let Err(e) = task_chan.send(task).await {
-                    wd_log::log_field("error", e)
-                        .error("run next node, send to task_chan channel failed");
-                }
-                return;
+            CtxStatus::RUNNING => {
+                let err_info = "running status can not to RuntimeWait.poll";
+                wd_log::log_warn_ln!("{}", err_info);
+                return Poll::Ready(anyhow::Error::msg(err_info).err());
             }
-        });
+            CtxStatus::SUCCESS | CtxStatus::ERROR => {
+                let result = self.ctx.end_output::<O>();
+                return Poll::Ready(result);
+            }
+        }
     }
 }
