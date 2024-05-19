@@ -13,7 +13,7 @@ use std::sync::Arc;
 use wd_tools::PFErr;
 
 #[derive(Debug)]
-pub struct OpenaiLLM {
+pub struct OpenaiLLMService {
     openai_client: Client<OpenAIConfig>,
 }
 
@@ -161,13 +161,13 @@ impl LLMNodeRequest {
         Ok(req)
     }
 }
-impl Default for OpenaiLLM {
+impl Default for OpenaiLLMService {
     fn default() -> Self {
         let openai_client = Client::new();
         Self { openai_client }
     }
 }
-impl OpenaiLLM {
+impl OpenaiLLMService {
     pub fn check(req: &LLMNodeRequest) -> anyhow::Result<()> {
         if req.model.is_empty() {
             return anyhow::anyhow!("module can not is nil").err();
@@ -207,7 +207,7 @@ impl OpenaiLLM {
 }
 
 #[async_trait::async_trait]
-impl rt::ServiceLayer for OpenaiLLM {
+impl rt::ServiceLayer for OpenaiLLMService {
     type Config = LLMNodeRequest;
     type Output = LLMNodeResponse;
 
@@ -246,7 +246,7 @@ impl rt::ServiceLayer for OpenaiLLM {
 
 #[cfg(test)]
 mod test {
-    use crate::{LLMNodeResponse, OpenaiLLM};
+    use crate::{LLMNodeResponse, OpenaiLLMService};
     use rt::{CtxStatus, PlanBuilder, Runtime};
     use std::io::{BufRead, Write};
     use std::time::Duration;
@@ -257,7 +257,7 @@ mod test {
     #[tokio::test]
     async fn test_llm_node_chat() {
         let rt = Runtime::default()
-            .register_service_layer("openai_llm", OpenaiLLM::default())
+            .register_service_layer("openai_llm", OpenaiLLMService::default())
             .launch();
         let stdin = std::io::stdin().lock();
         let mut stdin = stdin.lines();
@@ -291,7 +291,7 @@ mod test {
     #[tokio::test]
     async fn test_llm_node_stream() {
         let rt = Runtime::default()
-            .register_service_layer("openai_llm", OpenaiLLM::default())
+            .register_service_layer("openai_llm", OpenaiLLMService::default())
             .launch();
         let stdin = std::io::stdin().lock();
         let mut stdin = stdin.lines();
@@ -310,7 +310,7 @@ mod test {
                         .check_and_build()
                         .unwrap(),
                 )
-                .updates(OpenaiLLM::set_channel_to_ctx)
+                .updates(OpenaiLLMService::set_channel_to_ctx)
                 .arc();
             ctx.clone().spawn().unwrap();
 
@@ -318,7 +318,7 @@ mod test {
                 let status = ctx.status();
                 let over = status == CtxStatus::SUCCESS || status == CtxStatus::ERROR;
 
-                if let Some(s) = OpenaiLLM::try_recv_from_channel(&ctx) {
+                if let Some(s) = OpenaiLLMService::try_recv_from_channel(&ctx) {
                     print!("{}", s);
                     std::io::stdout().flush().unwrap();
                 }
