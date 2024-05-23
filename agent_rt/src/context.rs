@@ -193,6 +193,19 @@ impl Context {
         }
         self
     }
+    pub(crate) fn exec_over_callback(self: &Arc<Self>) {
+        if let Some(ref fs) = self.over_callback {
+            let mut lock = fs.lock().unwrap();
+            while let Some(function) = lock.pop() {
+                function(self.clone())
+            }
+        }
+    }
+    pub(crate) fn at_rt_waker_waiter(&self) {
+        if let Some(waker) = self.runtime.waker.remove(self.code.as_str()) {
+            waker.waker.wake_by_ref()
+        }
+    }
     pub fn error_over(&self, err: impl Error) {
         let err = format!("{}", err);
         self.set(END_RESULT_ERROR, err);

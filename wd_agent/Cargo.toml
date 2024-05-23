@@ -1,5 +1,5 @@
 [package]
-name = "agentv2"
+name = "wd_agent"
 version = "0.1.0"
 edition.workspace = true
 authors.workspace = true
@@ -23,3 +23,5 @@ serde.workspace = true
 async-openai.workspace = true
 agent_rt = {path = "../agent_rt",version = "0.1"}
 futures.workspace = true
+reqwest.workspace = true
+wd_event.workspace = true

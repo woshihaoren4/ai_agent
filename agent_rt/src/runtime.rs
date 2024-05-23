@@ -113,6 +113,8 @@ impl Runtime {
             NextNodeResult::Over | NextNodeResult::Wait => return,
             NextNodeResult::Error(e) => {
                 ctx.error_over(RTError::UNKNOWN(e));
+                ctx.exec_over_callback();
+                ctx.at_rt_waker_waiter();
                 return;
             }
             NextNodeResult::Nodes(s) => s,
@@ -123,6 +125,8 @@ impl Runtime {
                 None => {
                     let err = RTError::UnknownNodeId(i.node_type_id);
                     ctx.error_over(err);
+                    ctx.exec_over_callback();
+                    ctx.at_rt_waker_waiter();
                     return;
                 }
                 Some(n) => middle.push_back(n),
@@ -130,26 +134,44 @@ impl Runtime {
 
             let flow = Flow::new(i, ctx.clone(), middle);
             let this_node_code = node_code.to_string();
-
             tokio::spawn(async move {
-                let code = flow.code.clone();
                 let ctx = flow.ctx.clone();
+                let result = tokio::spawn(async move {
+                    let code = flow.code.clone();
+                    let ctx = flow.ctx.clone();
 
-                let parent_ctx_code = ctx.parent_code.clone().unwrap_or("".into());
-                ctx.push_stack_info(parent_ctx_code, this_node_code, flow.code.clone());
+                    let parent_ctx_code = ctx.parent_code.clone().unwrap_or("".into());
+                    ctx.push_stack_info(parent_ctx_code, this_node_code, flow.code.clone());
 
-                if let Err(e) = flow.call().await {
-                    //检查是否强制终止
-                    if let Some(e) = e.downcast_ref::<RTError>() {
-                        if *e == RTError::ContextAbort {
-                            return;
+                    if let Err(e) = flow.call().await {
+                        //检查是否强制终止
+                        if let Some(e) = e.downcast_ref::<RTError>() {
+                            if *e == RTError::ContextAbort {
+                                return;
+                            }
                         }
+                        //否则为异常错误
+                        wd_log::log_error_ln!("Runtime.exec_next_node:Unanticipated errors:{}", e);
+                        ctx.error_over(e.deref());
+                    } else {
+                        Runtime::exec_next_node(ctx, code.as_str());
                     }
-                    //否则为异常错误
-                    wd_log::log_error_ln!("Runtime.exec_next_node:Unanticipated errors:{}", e);
-                    ctx.error_over(e.deref());
-                } else {
-                    Runtime::exec_next_node(ctx, code.as_str());
+                })
+                .await;
+                //先检查错误
+                if let Err(e) = result {
+                    let status = ctx.status();
+                    let info = format!("Runtime.exec_next_node run task panic:{}", e);
+                    wd_log::log_error_ln!("{}", info);
+                    if status != CtxStatus::ERROR && status != CtxStatus::SUCCESS {
+                        ctx.error_over(RTError::UNKNOWN(info));
+                    }
+                }
+                //再检查状态
+                let status = ctx.status();
+                if status == CtxStatus::ERROR || status == CtxStatus::SUCCESS {
+                    ctx.exec_over_callback();
+                    ctx.at_rt_waker_waiter();
                 }
             });
         }

@@ -29,6 +29,7 @@ pub trait WakerWaitPool: Send + Sync {
     fn remove(&self, code: &str) -> Option<WakerCallBack>;
 }
 
+#[derive(Debug)]
 pub enum NextNodeResult {
     Over,             //没有下一个节点了
     Wait,             //下一个节点未就绪

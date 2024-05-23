@@ -1,33 +1,33 @@
 use crate::{CtxStatus, Flow, Output, RTError, Runtime, END_NODE_CODE};
 
 impl Runtime {
-    pub async fn middle_handle_ctx_over_callback(flow: Flow) -> anyhow::Result<Output> {
-        let ctx = flow.ctx.clone();
-        let res = flow.call().await;
-        if let Some(ref lock) = ctx.over_callback {
-            match ctx.status() {
-                CtxStatus::SUCCESS | CtxStatus::ERROR => {
-                    let mut lock = lock.lock().unwrap();
-                    while let Some(i) = lock.pop() {
-                        i(ctx.clone());
-                    }
-                }
-                _ => {}
-            }
-        }
-        return res;
-    }
-    pub async fn middle_handle_waker_waiter(flow: Flow) -> anyhow::Result<Output> {
-        let ctx = flow.ctx.clone();
-        let res = flow.call().await;
-        let status = ctx.status();
-        if status == CtxStatus::SUCCESS || status == CtxStatus::ERROR {
-            if let Some(w) = ctx.runtime.waker.remove(ctx.code.as_str()) {
-                w.waker.wake();
-            }
-        }
-        res
-    }
+    // pub async fn middle_handle_ctx_over_callback(flow: Flow) -> anyhow::Result<Output> {
+    //     let ctx = flow.ctx.clone();
+    //     let res = flow.call().await;
+    //     if let Some(ref lock) = ctx.over_callback {
+    //         match ctx.status() {
+    //             CtxStatus::SUCCESS | CtxStatus::ERROR => {
+    //                 let mut lock = lock.lock().unwrap();
+    //                 while let Some(i) = lock.pop() {
+    //                     i(ctx.clone());
+    //                 }
+    //             }
+    //             _ => {}
+    //         }
+    //     }
+    //     return res;
+    // }
+    // pub async fn middle_handle_waker_waiter(flow: Flow) -> anyhow::Result<Output> {
+    //     let ctx = flow.ctx.clone();
+    //     let res = flow.call().await;
+    //     let status = ctx.status();
+    //     if status == CtxStatus::SUCCESS || status == CtxStatus::ERROR {
+    //         if let Some(w) = ctx.runtime.waker.remove(ctx.code.as_str()) {
+    //             w.waker.wake();
+    //         }
+    //     }
+    //     res
+    // }
     pub async fn middle_handle_save_output_to_ctx(flow: Flow) -> anyhow::Result<Output> {
         let code = flow.code.clone();
         let ctx = flow.ctx.clone();
@@ -71,8 +71,9 @@ impl Runtime {
         flow.call().await
     }
     pub(crate) fn register_default_middle_handles(self) -> Self {
-        self.register_middle_fn(Runtime::middle_handle_ctx_over_callback)
-            .register_middle_fn(Runtime::middle_handle_waker_waiter)
+        self
+            // .register_middle_fn(Runtime::middle_handle_ctx_over_callback)
+            //     .register_middle_fn(Runtime::middle_handle_waker_waiter)
             .register_middle_fn(Runtime::middle_handle_status_check)
             .register_middle_fn(Runtime::middle_handle_stack_check)
             .register_middle_fn(Runtime::middle_handle_save_output_to_ctx)

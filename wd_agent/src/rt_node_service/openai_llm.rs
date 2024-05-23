@@ -1,3 +1,5 @@
+use crate::rt_node_service::LLMToolCallRequest;
+use agent_rt::Context;
 use async_openai::config::OpenAIConfig;
 use async_openai::types::{
     ChatCompletionMessageToolCallChunk, ChatCompletionRequestMessage,
@@ -6,7 +8,6 @@ use async_openai::types::{
 };
 use async_openai::Client;
 use futures::StreamExt;
-use agent_rt::Context;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -17,7 +18,7 @@ pub struct OpenaiLLMService {
     openai_client: Client<OpenAIConfig>,
 }
 
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct LLMNodeRequest {
     #[serde(default = "String::default")]
     pub prompt: String,
@@ -50,16 +51,10 @@ impl LLMNodeRequest {
     }
 }
 
-#[derive(Debug, Default, Clone,Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct LLMNodeResponse {
     pub answer: Option<String>,
-    pub tools: Option<Vec<LLMNodeTools>>,
-}
-#[derive(Debug, Default, Clone,Deserialize, Serialize)]
-pub struct LLMNodeTools {
-    pub id: Option<String>,
-    pub name: String,
-    pub args: Option<String>,
+    pub tools: Option<Vec<LLMToolCallRequest>>,
 }
 
 impl LLMNodeResponse {
@@ -83,8 +78,8 @@ impl LLMNodeResponse {
                 let id = i.id;
                 if let Some(fcs) = i.function {
                     if fcs.name.is_some() {
-                        vec.push(LLMNodeTools {
-                            id,
+                        vec.push(LLMToolCallRequest {
+                            call_id: id,
                             name: fcs.name.unwrap(),
                             args: fcs.arguments,
                         })
@@ -207,7 +202,7 @@ impl OpenaiLLMService {
 }
 
 #[async_trait::async_trait]
-impl rt::ServiceLayer for OpenaiLLMService {
+impl agent_rt::ServiceLayer for OpenaiLLMService {
     type Config = LLMNodeRequest;
     type Output = LLMNodeResponse;
 
@@ -220,6 +215,7 @@ impl rt::ServiceLayer for OpenaiLLMService {
         // wd_log::log_debug_ln!("start call code[{}.{}.openai_llm]",ctx.code,code);
         let req = cfg.to_openai_chat_request()?;
         let mut stream = self.openai_client.chat().create_stream(req).await?;
+
         let mut resp = LLMNodeResponse::default();
         while let Some(msg) = stream.next().await {
             let msg = match msg {
@@ -246,11 +242,11 @@ impl rt::ServiceLayer for OpenaiLLMService {
 
 #[cfg(test)]
 mod test {
-    use crate::{LLMNodeResponse, OpenaiLLMService};
-    use rt::{CtxStatus, PlanBuilder, Runtime};
+    use crate::rt_node_service::{LLMNodeResponse, OpenaiLLMService};
+    use agent_rt::{CtxStatus, PlanBuilder, Runtime};
+    use serde_json::Value;
     use std::io::{BufRead, Write};
     use std::time::Duration;
-    use serde_json::Value;
     use wd_tools::PFArc;
 
     //cargo test openai_llm::test::test_llm_node_chat -- --nocapture
@@ -278,11 +274,12 @@ mod test {
                 )
                 // .updates(OpenaiLLM::set_channel_to_ctx)
                 .arc()
-                .block_on::<Value>().await
+                .block_on::<Value>()
+                .await
                 .unwrap();
             let resp = serde_json::from_value::<LLMNodeResponse>(resp).unwrap();
 
-            print!("{}\nuser --->",resp.answer.unwrap_or("".into()));
+            print!("{}\nuser --->", resp.answer.unwrap_or("".into()));
             std::io::stdout().flush().unwrap();
         }
     }

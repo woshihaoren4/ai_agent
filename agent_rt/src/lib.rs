@@ -173,4 +173,25 @@ mod tests {
             .unwrap();
         println!("--->{}", out);
     }
+
+    // cargo test tests::test_runtime_panic -- --nocapture
+    #[tokio::test]
+    pub async fn test_runtime_panic() {
+        let rt = Runtime::default()
+            .register_service_fn("node_id_1", |f| async move {
+                wd_log::log_info_ln!("node1=>{:?}", f);
+                panic!("node1 test panic");
+                // Ok(Output::new("success".to_string()).raw_to_ctx())
+            })
+            .launch();
+
+        let plan = PlanBuilder::single_node("node_id_2", "{}")
+            .check_and_build()
+            .unwrap();
+
+        let ctx = rt.ctx("test001", plan).arc();
+        let res = rt.block_on::<String>(ctx).await;
+        println!("{:?}", res);
+        assert_eq!(true, res.is_err());
+    }
 }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["agentv2", "example", "agent_rt"]
+members = ["wd_agent", "example", "agent_rt"]
 
 [workspace.package]
 edition = "2021"
@@ -11,7 +11,7 @@ license = "MIT"
 readme = "README.md"
 
 [workspace.dependencies]
-wd_tools = {version = "0.10.0",features = ["point-free","sync","ptr","md5","hex","time"]}
+wd_tools = {version = "0.13.3",features = ["point-free","sync","ptr","md5","hex","time","http","b64"]}
 anyhow = "1.0.75"
 serde = {version = "1.0.188",features = ["derive"]}
 serde_json = "1.0.105"
@@ -19,7 +19,9 @@ tokio = {version = "1",features = ["full"]}
 async-channel = "2.2.0"
 wd_log = "0.3.0"
 async-trait = "0.1.77"
-async-openai = "0.19.0"
+async-openai = "0.21.0"
 lazy_static = "1.4.0"
 bytes = "1.5.0"
 futures = "0.3.30"
+reqwest = "0.12.4"
+wd_event = "0.6.1"
