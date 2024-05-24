@@ -1,5 +1,5 @@
 [workspace]
-members = ["wd_agent", "example", "agent_rt"]
+members = ["wd_agent", "example", "agent_rt", "python_rt"]
 
 [workspace.package]
 edition = "2021"

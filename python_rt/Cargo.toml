@@ -1,0 +1,18 @@
+[package]
+name = "python_rt"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+description.workspace = true
+license.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pyo3 = {version = "0.21.2",features = ["auto-initialize","serde"]}
+anyhow.workspace = true
+serde_json.workspace = true
+serde.workspace = true
