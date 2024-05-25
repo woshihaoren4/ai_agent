@@ -1,108 +1,111 @@
+use crate::{Memory, PromptBuilder};
 use std::mem::take;
 use std::sync::Arc;
 use std::vec;
-use crate::{Memory, PromptBuilder};
-
 
 #[derive(Eq, PartialEq)]
-pub enum Language{
+pub enum Language {
     Chinese,
 }
 
-#[derive(Clone,Default)]
-pub struct PromptCommonTemplate{
-    role:Option<String>,
-    target:Option<String>,
-    style:Option<String>,
-    skill:Option<Vec<String>>,
-    example:Option<Vec<String>>,
-    user:Option<Vec<(String,String)>>,
-    records:Option<Vec<String>>,
-    limit:Option<Vec<String>>,
-    extend:Option<Vec<(String,String)>>,
+#[derive(Clone, Default)]
+pub struct PromptCommonTemplate {
+    role: Option<String>,
+    target: Option<String>,
+    style: Option<String>,
+    skill: Option<Vec<String>>,
+    example: Option<Vec<String>>,
+    user: Option<Vec<(String, String)>>,
+    records: Option<Vec<String>>,
+    limit: Option<Vec<String>>,
+    extend: Option<Vec<(String, String)>>,
 
-    tags:Vec<String>,
-    memory:Option<Arc<dyn Memory>>,
+    tags: Vec<String>,
+    memory: Option<Arc<dyn Memory>>,
     recall_history: usize,
 }
 
 impl PromptCommonTemplate {
-
     #[allow(dead_code)]
-    pub fn role<S:Into<String>>(&mut self,content:S)->&mut Self{
-        self.role = Some(content.into());self
+    pub fn role<S: Into<String>>(&mut self, content: S) -> &mut Self {
+        self.role = Some(content.into());
+        self
     }
     #[allow(dead_code)]
-    pub fn target<S:Into<String>>(&mut self,content:S)->&mut Self{
-        self.target = Some(content.into());self
+    pub fn target<S: Into<String>>(&mut self, content: S) -> &mut Self {
+        self.target = Some(content.into());
+        self
     }
     #[allow(dead_code)]
-    pub fn style<S:Into<String>>(&mut self,content:S)->&mut Self{
-        self.style = Some(content.into());self
+    pub fn style<S: Into<String>>(&mut self, content: S) -> &mut Self {
+        self.style = Some(content.into());
+        self
     }
     #[allow(dead_code)]
-    pub fn memory(&mut self,mem:Arc<dyn Memory>)->&mut Self{
-        self.memory = Some(mem);self
+    pub fn memory(&mut self, mem: Arc<dyn Memory>) -> &mut Self {
+        self.memory = Some(mem);
+        self
     }
     #[allow(dead_code)]
-    pub fn history_top_n(&mut self,n:usize)->&mut Self{
-        self.recall_history = n;self
+    pub fn history_top_n(&mut self, n: usize) -> &mut Self {
+        self.recall_history = n;
+        self
     }
     #[allow(dead_code)]
-    pub fn add_skill<S:Into<String>>(&mut self,content:S)->&mut Self{
+    pub fn add_skill<S: Into<String>>(&mut self, content: S) -> &mut Self {
         if let Some(ref mut s) = self.skill {
             s.push(content.into());
-        }else{
+        } else {
             self.skill = Some(vec![content.into()]);
         }
         self
     }
     #[allow(dead_code)]
-    pub fn add_example<S:Into<String>>(&mut self,content:S)->&mut Self{
+    pub fn add_example<S: Into<String>>(&mut self, content: S) -> &mut Self {
         if let Some(ref mut s) = self.example {
             s.push(content.into());
-        }else{
+        } else {
             self.example = Some(vec![content.into()]);
         }
         self
     }
     #[allow(dead_code)]
-    pub fn add_records<S:Into<String>>(&mut self,content:S)->&mut Self{
+    pub fn add_records<S: Into<String>>(&mut self, content: S) -> &mut Self {
         if let Some(ref mut s) = self.records {
             s.push(content.into());
-        }else{
+        } else {
             self.records = Some(vec![content.into()]);
         }
         self
     }
     #[allow(dead_code)]
-    pub fn add_user<K:Into<String>,V:Into<String>>(&mut self,key:K,val:V)->&mut Self{
+    pub fn add_user<K: Into<String>, V: Into<String>>(&mut self, key: K, val: V) -> &mut Self {
         if let Some(ref mut s) = self.user {
-            s.push((key.into(),val.into()));
-        }else{
-            self.user = Some(vec![(key.into(),val.into())]);
+            s.push((key.into(), val.into()));
+        } else {
+            self.user = Some(vec![(key.into(), val.into())]);
         }
         self
     }
     #[allow(dead_code)]
-    pub fn add_extend<K:Into<String>,V:Into<String>>(&mut self,key:K,val:V)->&mut Self{
+    pub fn add_extend<K: Into<String>, V: Into<String>>(&mut self, key: K, val: V) -> &mut Self {
         if let Some(ref mut s) = self.extend {
-            s.push((key.into(),val.into()));
-        }else{
-            self.extend = Some(vec![(key.into(),val.into())]);
+            s.push((key.into(), val.into()));
+        } else {
+            self.extend = Some(vec![(key.into(), val.into())]);
         }
         self
     }
     #[allow(dead_code)]
-    pub fn add_tags(&mut self, mut tags:Vec<String>) ->&mut Self{
+    pub fn add_tags(&mut self, mut tags: Vec<String>) -> &mut Self {
         self.tags.append(&mut tags);
         self
     }
     #[allow(dead_code)]
-    pub fn add_limit<S:Into<String>>(&mut self,content:S)->&mut Self{
+    pub fn add_limit<S: Into<String>>(&mut self, content: S) -> &mut Self {
         if let Some(ref mut s) = self.limit {
             s.push(content.into());
-        }else{
+        } else {
             self.limit = Some(vec![content.into()]);
         }
         self
@@ -110,10 +113,10 @@ impl PromptCommonTemplate {
 }
 
 #[async_trait::async_trait]
-impl PromptBuilder for PromptCommonTemplate{
+impl PromptBuilder for PromptCommonTemplate {
     async fn build(&self, uid: &str, query: &str, lg: Language) -> String {
         if lg != Language::Chinese {
-            return "".into()
+            return "".into();
         }
         let mut p = String::new();
 
@@ -121,109 +124,110 @@ impl PromptBuilder for PromptCommonTemplate{
             p.push_str("# 角色\n");
             p.push_str(s.as_str())
         }
-        if let Some(ref s) = self.target{
+        if let Some(ref s) = self.target {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 目标\n");
             p.push_str(s.as_str())
         }
-        if let Some(ref s) = self.style{
+        if let Some(ref s) = self.style {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 风格\n");
             p.push_str(s.as_str())
         }
-        if let Some(ref list) = self.skill{
+        if let Some(ref list) = self.skill {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 技能");
-            for (i,e) in list.iter().enumerate(){
+            for (i, e) in list.iter().enumerate() {
                 p.push_str("\n");
-                p += format!("{}. {}",i+1,e.as_str()).as_str();
+                p += format!("{}. {}", i + 1, e.as_str()).as_str();
             }
         }
-        if let Some(ref list) = self.example{
+        if let Some(ref list) = self.example {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 示例");
-            for (i,e) in list.iter().enumerate(){
+            for (i, e) in list.iter().enumerate() {
                 p.push_str("\n");
-                p += format!("{}. {}",i+1,e.as_str()).as_str();
+                p += format!("{}. {}", i + 1, e.as_str()).as_str();
             }
         }
-        if let Some(ref list) = self.records{
+        if let Some(ref list) = self.records {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 记录");
-            for (i,e) in list.iter().enumerate(){
+            for (i, e) in list.iter().enumerate() {
                 p.push_str("\n");
-                p += format!("{}. {}",i+1,e.as_str()).as_str();
+                p += format!("{}. {}", i + 1, e.as_str()).as_str();
             }
         }
-        if let Some(ref list) = self.user{
+        if let Some(ref list) = self.user {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 信息");
-            for (k,v) in list.iter(){
+            for (k, v) in list.iter() {
                 p.push_str("\n");
-                p += format!("- {}: {}",k,v).as_str();
+                p += format!("- {}: {}", k, v).as_str();
             }
         }
-        if let Some(ref list) = self.limit{
+        if let Some(ref list) = self.limit {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 限制");
-            for (i,e) in list.iter().enumerate(){
+            for (i, e) in list.iter().enumerate() {
                 p.push_str("\n");
-                p += format!("{}. {}",i+1,e.as_str()).as_str();
+                p += format!("{}. {}", i + 1, e.as_str()).as_str();
             }
         }
-        if let Some(ref list) = self.extend{
+        if let Some(ref list) = self.extend {
             if !p.is_empty() {
                 p.push_str("\n")
             }
             p.push_str("## 设定");
-            for (k,v) in list.iter(){
+            for (k, v) in list.iter() {
                 p.push_str("\n");
-                p += format!("### {}\n",k).as_str();
+                p += format!("### {}\n", k).as_str();
                 p.push_str(v.as_str());
             }
         }
-        if let Some(ref memory) = self.memory{
+        if let Some(ref memory) = self.memory {
             //替换标签
-            if !p.is_empty() && self.memory.is_some(){
-                for i in self.tags.iter(){
-                    if let Ok(s) = memory.get_user_tag(uid,i.as_str()).await{
-                        println!("tag--->{}:{}",i.as_str(),s.as_str());
+            if !p.is_empty() && self.memory.is_some() {
+                for i in self.tags.iter() {
+                    if let Ok(s) = memory.get_user_tag(uid, i.as_str()).await {
+                        println!("tag--->{}:{}", i.as_str(), s.as_str());
                         p = p.replace(format!("${{{}}}", i).as_str(), s.as_str());
-                    }else{
-                        p = p.replace(format!("${{{}}}", i).as_str(),"");
+                    } else {
+                        p = p.replace(format!("${{{}}}", i).as_str(), "");
                     }
                 }
             }
             if self.recall_history > 0 {
-                let result = memory.recall_summary(uid,query,self.recall_history).await;
+                let result = memory.recall_summary(uid, query, self.recall_history).await;
                 match result {
                     Ok(list) => {
                         if !p.is_empty() {
                             p.push_str("\n");
                         }
                         p.push_str("## 过往信息总结");
-                        for (i,e) in list.into_iter().enumerate(){
-                            println!("history: -->{}",e);
+                        for (i, e) in list.into_iter().enumerate() {
+                            println!("history: -->{}", e);
                             p.push_str("\n");
-                            p += format!("{}. {}",i+1,e).as_str();
+                            p += format!("{}. {}", i + 1, e).as_str();
                         }
                     }
                     Err(e) => {
-                        wd_log::log_field("error",e).error("make prompt failed,memory recall_summary error");
+                        wd_log::log_field("error", e)
+                            .error("make prompt failed,memory recall_summary error");
                     }
                 }
             }
@@ -231,29 +235,29 @@ impl PromptBuilder for PromptCommonTemplate{
         p
     }
 }
-impl Into<PromptCommonTemplate> for &mut PromptCommonTemplate{
+impl Into<PromptCommonTemplate> for &mut PromptCommonTemplate {
     fn into(self) -> PromptCommonTemplate {
         take(self)
     }
 }
 #[cfg(test)]
-mod test{
-    use std::collections::HashMap;
-    use wd_tools::PFArc;
+mod test {
     use crate::prompt::{Language, PromptBuilder, PromptCommonTemplate};
     use crate::{Memory, ShortLongMemoryMap};
+    use std::collections::HashMap;
+    use wd_tools::PFArc;
 
     #[tokio::test]
-    async fn test_prompt_common_template(){
+    async fn test_prompt_common_template() {
         let uid = "test_uid_mr";
 
         let mut memory = ShortLongMemoryMap::default();
         memory.init(uid);
         let memory = memory.arc();
 
-        memory.set_user_tage(uid,HashMap::from([
-            ("name".into(),"宇智波佐助".into()),
-        ])).await;
+        memory
+            .set_user_tage(uid, HashMap::from([("name".into(), "宇智波佐助".into())]))
+            .await;
 
         let p = PromptCommonTemplate::default()
             .memory(memory)
@@ -278,7 +282,6 @@ mod test{
             .add_tags(vec!["name".into()])
             .build(uid, "来，打一架吧", Language::Chinese).await;
 
-        println!("--->\n{}\n<---",p);
-
+        println!("--->\n{}\n<---", p);
     }
 }

@@ -1,7 +1,13 @@
-use crate::consts::{callback_self, go_next_or_over, AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER, MULTI_AGENT_RECALL_TOOLS, user_id_from_ctx};
+use crate::consts::{
+    callback_self, go_next_or_over, user_id_from_ctx, AGENT_EXEC_STATUS, AGENT_TOOL_WRAPPER,
+    MULTI_AGENT_RECALL_TOOLS,
+};
 use crate::llm::LLMNodeRequest;
+use crate::short_long_memory::ShortLongMemoryMap;
 use crate::tool::AgentTool;
-use crate::{Language, Memory, prompt_from_ctx, prompt_to_ctx, PromptBuilder, PromptCommonTemplate};
+use crate::{
+    prompt_from_ctx, prompt_to_ctx, Language, Memory, PromptBuilder, PromptCommonTemplate,
+};
 use async_openai::types::{
     ChatChoice, ChatCompletionMessageToolCall, ChatCompletionRequestAssistantMessageArgs,
     ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionTool,
@@ -10,14 +16,13 @@ use async_openai::types::{
 use rt::{Context, Node, TaskInput, TaskOutput};
 use std::sync::Arc;
 use wd_tools::{PFArc, PFErr, PFOk};
-use crate::short_long_memory::{ ShortLongMemoryMap};
 
 #[derive(Clone)]
 pub struct SingleAgentNode {
     prompt: Arc<dyn PromptBuilder>,
     tools: Vec<ChatCompletionTool>,
     // memory: Arc<dyn EasyMemory>,
-    memory:Arc<dyn Memory>,
+    memory: Arc<dyn Memory>,
 
     id: String,
     max_context_window: usize,
@@ -52,7 +57,7 @@ impl SingleAgentNode {
     //     self.prompt = pp.into();
     //     self
     // }
-    pub fn set_prompt<S: PromptBuilder+'static>(mut self, pb: S) -> Self {
+    pub fn set_prompt<S: PromptBuilder + 'static>(mut self, pb: S) -> Self {
         self.prompt = Arc::new(pb);
         self
     }
@@ -60,7 +65,7 @@ impl SingleAgentNode {
         self.tools.push(tool);
         self
     }
-    pub fn set_llm<S:Into<String>>(mut self, llm: S) -> Self {
+    pub fn set_llm<S: Into<String>>(mut self, llm: S) -> Self {
         self.llm_model = llm.into();
         self
     }
@@ -97,7 +102,10 @@ impl SingleAgentNode {
         let mut req = LLMNodeRequest::default();
         req.prompt = prompt_from_ctx(&*ctx);
         // req.context = self.memory.load_context(self.max_context_window)?;
-        req.context = self.memory.load_context(user_id_from_ctx(&*ctx).as_str(),self.max_context_window).await?;
+        req.context = self
+            .memory
+            .load_context(user_id_from_ctx(&*ctx).as_str(), self.max_context_window)
+            .await?;
         req.context.append(&mut context);
         req.tools.append(&mut self.tools.clone());
         let self_id = self.id();
@@ -132,7 +140,12 @@ impl SingleAgentNode {
         // self.memory
         //     .add_session_log(vec![user_question, ai_response]);
 
-        self.memory.add_session_log(user_id_from_ctx(&*ctx).as_str(),vec![user_question, ai_response]).await;
+        self.memory
+            .add_session_log(
+                user_id_from_ctx(&*ctx).as_str(),
+                vec![user_question, ai_response],
+            )
+            .await;
 
         go_next_or_over(ctx, msg)
         // TaskOutput::from_value(msg).over().ok()
@@ -199,7 +212,16 @@ impl Node for SingleAgentNode {
                 let query = args.get_value::<String>();
                 if let Some(q) = query {
                     if prompt_from_ctx(&*ctx).is_empty() {
-                        prompt_to_ctx(&*ctx,self.prompt.build(user_id_from_ctx(&*ctx).as_str(),q.as_ref(),Language::Chinese).await);
+                        prompt_to_ctx(
+                            &*ctx,
+                            self.prompt
+                                .build(
+                                    user_id_from_ctx(&*ctx).as_str(),
+                                    q.as_ref(),
+                                    Language::Chinese,
+                                )
+                                .await,
+                        );
                     }
                     let req: ChatCompletionRequestMessage =
                         ChatCompletionRequestUserMessageArgs::default()
@@ -229,7 +251,9 @@ impl Node for SingleAgentNode {
                 } = resp.choices.remove(0);
                 match finish_reason.unwrap() {
                     FinishReason::Stop => {
-                        return self.over(ctx, message.content.unwrap_or("无语".to_string())).await
+                        return self
+                            .over(ctx, message.content.unwrap_or("无语".to_string()))
+                            .await
                     }
                     FinishReason::ToolCalls => {
                         return self.function_call(ctx, message.tool_calls.unwrap().remove(0))
@@ -249,9 +273,9 @@ mod test {
     use crate::llm::LLMNode;
     use crate::single_agent::SingleAgentNode;
     use crate::tool::ToolNode;
+    use crate::PromptCommonTemplate;
     use rt::{Node, Runtime};
     use std::io::{BufRead, Write};
-    use crate::PromptCommonTemplate;
 
     // cargo test single_agent::test::test_single_agent -- --nocapture
     #[tokio::test]

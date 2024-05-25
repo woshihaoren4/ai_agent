@@ -2,7 +2,7 @@ use crate::plugin_tools::{ToolFunction, ToolHttp};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use wd_tools::{PFErr};
+use wd_tools::PFErr;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -83,7 +83,7 @@ impl Plugin {
                 let (host, port) = if let Some(s) = self.server {
                     s
                 } else {
-                    // return anyhow::anyhow!("plugin:api[{}] http tool but server is nil",tool_name).err()
+                    // return anyhow::anyhow!("plugin:api[{}] http tool but grpc is nil",tool_name).err()
                     ("".to_string(), 0)
                 };
                 htp.call(host, port, args, self.auth).await

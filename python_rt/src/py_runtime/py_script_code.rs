@@ -1,66 +1,84 @@
 use pyo3::prelude::*;
-use pyo3::Python;
 use pyo3::types::{PyDict, PyList};
+use pyo3::Python;
 use serde_json::{Map, Value};
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub enum ScriptSrc {
     ScriptCode(String),
     #[default]
-    ModuleName
+    ModuleName,
 }
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct PyScriptEntity {
     pub src: ScriptSrc,
-    pub module_name:String,
-    pub file_name:Option<String>,
-    pub sys_path:Option<String>,
+    pub module_name: String,
+    pub file_name: Option<String>,
+    pub sys_path: Option<String>,
 }
 
 impl<S> From<S> for PyScriptEntity
-where S:Into<String>
+where
+    S: Into<String>,
 {
     fn from(value: S) -> Self {
-        Self::new(value,"default")
+        Self::new(value, "default")
     }
 }
 
 impl PyScriptEntity {
-    pub fn from_module<N:Into<String>>(module_name:N)->Self{
+    pub fn from_module<N: Into<String>>(module_name: N) -> Self {
         let src = ScriptSrc::ModuleName;
         let module_name = module_name.into();
-        Self{src,module_name,..Default::default()}
+        Self {
+            src,
+            module_name,
+            ..Default::default()
+        }
     }
-    pub fn new<S:Into<String>,N:Into<String>>(src:S,module_name:N)->Self{
+    pub fn new<S: Into<String>, N: Into<String>>(src: S, module_name: N) -> Self {
         let src = ScriptSrc::ScriptCode(src.into());
         let module_name = module_name.into();
-        Self{src,module_name,..Default::default()}
+        Self {
+            src,
+            module_name,
+            ..Default::default()
+        }
     }
-    pub fn set_sys_path<S:Into<String>>(mut self,path:S)->Self{
-        self.sys_path = Some(path.into());self
+    pub fn set_sys_path<S: Into<String>>(mut self, path: S) -> Self {
+        self.sys_path = Some(path.into());
+        self
     }
     #[allow(dead_code)]
-    pub fn set_file_name<S:Into<String>>(mut self,file_name:S)->Self{
-        self.file_name = Some(file_name.into());self
+    pub fn set_file_name<S: Into<String>>(mut self, file_name: S) -> Self {
+        self.file_name = Some(file_name.into());
+        self
     }
-    pub fn eval_function(&self,function_name:&str,args:Value)->PyResult<Value>{
-        let Self{src, module_name, file_name,sys_path } = self;
-        let file_name = file_name.clone().unwrap_or(format!("{}.py",module_name));
-        Python::with_gil(move |py|{
+    pub fn eval_function(&self, function_name: &str, args: Value) -> PyResult<Value> {
+        wd_log::log_debug_ln!("eval_function -> {:?}", self);
+        let Self {
+            src,
+            module_name,
+            file_name,
+            sys_path,
+        } = self;
+        let file_name = file_name.clone().unwrap_or(format!("{}.py", module_name));
+        Python::with_gil(move |py| {
             //设置系统path
-            if let Some(path) = sys_path{
+            if let Some(path) = sys_path {
                 let syspath: &PyList = py.import_bound("sys")?.getattr("path")?.extract()?;
                 syspath.insert(0, &path)?;
             }
             //加载模型
             let module = match src {
-                ScriptSrc::ScriptCode(script) => {
-                    PyModule::from_code_bound(py, script.as_str(), file_name.as_str(), module_name.as_str())?
-                }
-                ScriptSrc::ModuleName => {
-                    PyModule::import_bound(py, module_name.as_str())?
-                }
+                ScriptSrc::ScriptCode(script) => PyModule::from_code_bound(
+                    py,
+                    script.as_str(),
+                    file_name.as_str(),
+                    module_name.as_str(),
+                )?,
+                ScriptSrc::ModuleName => PyModule::import_bound(py, module_name.as_str())?,
             };
             //加载函数
             let function = module.getattr(function_name)?;
@@ -158,12 +176,12 @@ impl PyScriptEntity {
     }
 }
 #[cfg(test)]
-mod test{
-    use serde_json::{Map, Number, Value};
+mod test {
+    use crate::py_runtime::py_script_code::PyScriptEntity;
     use serde::{Deserialize, Serialize};
-    use crate::py_runtime::py_script_code::{PyScriptEntity};
+    use serde_json::{Map, Number, Value};
 
-    const TEST_PYTHON_SCRIPT:&'static str = r#"
+    const TEST_PYTHON_SCRIPT: &'static str = r#"
 import sys
 
 def handle(input):
@@ -172,40 +190,41 @@ def handle(input):
     return {"code":0,"msg":"success","version":version}
     "#;
 
-    #[derive(Debug,Serialize,Deserialize)]
-    pub struct Response{
-        code:i32,
-        msg:String,
-        version:Option<String>
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct Response {
+        code: i32,
+        msg: String,
+        version: Option<String>,
     }
 
     #[test]
-    fn test_eval_function(){
+    fn test_eval_function() {
         let entity = PyScriptEntity::from(TEST_PYTHON_SCRIPT);
 
         let mut map = Map::new();
-        map.insert("hello".into(),Value::String("world".into()));
-        map.insert("num".into(),Value::Number(Number::from(1)));
-        map.insert("obj".into(),Value::Null);
+        map.insert("hello".into(), Value::String("world".into()));
+        map.insert("num".into(), Value::Number(Number::from(1)));
+        map.insert("obj".into(), Value::Null);
 
         let value = entity.eval_function("handle", Value::Object(map)).unwrap();
         let resp = serde_json::from_value::<Response>(value).unwrap();
-        println!("--->{:?}",resp);
-        assert_eq!(0,resp.code);
-        assert_eq!("success",resp.msg);
-        assert_eq!(true,resp.version.is_some());
-
+        println!("--->{:?}", resp);
+        assert_eq!(0, resp.code);
+        assert_eq!("success", resp.msg);
+        assert_eq!(true, resp.version.is_some());
     }
 
-
     #[test]
-    fn test_eval_from_file(){
-        let entity = PyScriptEntity::from_module("sys_info")
-            .set_sys_path("./custom_plugin");
+    fn test_eval_from_file() {
+        let entity = PyScriptEntity::from_module("sys_info").set_sys_path("./custom_plugin");
 
-        let value = entity.eval_function("get_system_info", Value::Null).unwrap();
-        println!("sys info --->{}",value);
-        let report = entity.eval_function("generate_system_report",value).unwrap();
-        println!("report ===> {}",report.to_string());
+        let value = entity
+            .eval_function("get_system_info", Value::Null)
+            .unwrap();
+        println!("sys info --->{}", value);
+        let report = entity
+            .eval_function("generate_system_report", value)
+            .unwrap();
+        println!("report ===> {}", report.to_string());
     }
 }

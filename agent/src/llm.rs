@@ -77,8 +77,9 @@ impl LLMNode {
         }
     }
     #[allow(dead_code)]
-    pub fn set_model<S:Into<String>>(mut self,model:S)->Self{
-        self.default_req.model = model.into();self
+    pub fn set_model<S: Into<String>>(mut self, model: S) -> Self {
+        self.default_req.model = model.into();
+        self
     }
     pub fn set_meta(mut self, req: LLMNodeRequest) -> Self {
         self.default_req = req;

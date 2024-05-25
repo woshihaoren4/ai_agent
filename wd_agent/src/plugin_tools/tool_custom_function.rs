@@ -1,4 +1,4 @@
-use crate::plugin_tools::{ Tool};
+use crate::plugin_tools::Tool;
 use std::future::Future;
 use std::sync::Arc;
 

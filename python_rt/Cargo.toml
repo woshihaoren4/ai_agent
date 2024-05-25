@@ -12,7 +12,21 @@ readme.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pyo3 = {version = "0.21.2",features = ["auto-initialize","serde"]}
+wd_tools.workspace = true
+wd_log.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 serde.workspace = true
+tokio.workspace = true
+pyo3 = {version = "0.21.2",features = ["auto-initialize","serde"]}
+tonic = { version = "0.11.0",optional = true }
+prost-types = { version = "0.12", optional = true }
+prost = { version = "0.12",optional = true }
+
+[features]
+#default = []
+default = ["grpc","server","client"]
+full = ["grpc","server","client"]
+grpc = ["tonic","prost-types","prost"]
+server = ["grpc"]
+client = ["grpc"]

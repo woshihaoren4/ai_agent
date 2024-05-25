@@ -137,13 +137,13 @@ impl Node for MultiAgent {
 mod test {
     use crate::llm::LLMNode;
     use crate::multi_agent::MultiAgent;
+    use crate::short_long_memory::ShortLongMemoryMap;
     use crate::single_agent::SingleAgentNode;
     use crate::tool::ToolNode;
+    use crate::PromptCommonTemplate;
     use rt::{Node, Runtime};
     use std::io::{BufRead, Write};
     use wd_tools::PFArc;
-    use crate::PromptCommonTemplate;
-    use crate::short_long_memory::{ShortLongMemoryMap};
 
     // cargo test multi_agent::test::test_multi_agent -- --nocapture
     #[tokio::test]
@@ -156,13 +156,21 @@ mod test {
 
         let info_agent = SingleAgentNode::default()
             .set_id("info_AI")
-            .set_prompt::<PromptCommonTemplate>(PromptCommonTemplate::default().role("你是一个信息查询助手。回答要严谨，简洁。").into())
+            .set_prompt::<PromptCommonTemplate>(
+                PromptCommonTemplate::default()
+                    .role("你是一个信息查询助手。回答要严谨，简洁。")
+                    .into(),
+            )
             .add_tool(weather_tool.as_openai_tool())
             .set_memory(memory.clone());
 
         let life_agent = SingleAgentNode::default()
             .set_id("life_AI")
-            .set_prompt::<PromptCommonTemplate>(PromptCommonTemplate::default().role("你是一个生活服务管家。回答要踏实，简洁。").into())
+            .set_prompt::<PromptCommonTemplate>(
+                PromptCommonTemplate::default()
+                    .role("你是一个生活服务管家。回答要踏实，简洁。")
+                    .into(),
+            )
             .add_tool(taobao_tool.as_openai_tool())
             .set_memory(memory);
 

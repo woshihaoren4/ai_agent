@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+
+service PythonRuntimeService{
+    rpc CallFunction(CallFunctionRequest)returns (CallFunctionResponse){
+        option (google.api.http) = {
+            post: "/api/v1/function/{function_name}"
+            body: "*"
+        };
+    };
+}
+
+enum SrcType {
+    SRC_TYPE_SCRIPT = 0;
+    SRC_TYPE_MODULE = 1;
+}
+
+message CallFunctionRequest{
+    SrcType src = 1;
+    // if src == SRC_TYPE_SCRIPT, script_code must have a python code.
+    optional string script_code = 2;
+    string module_name = 3;
+    //default: file_name = module_name.py
+    optional string file_name = 4;
+    optional string sys_path = 5;
+    string function_name = 6;
+    google.protobuf.Struct function_input = 7;
+
+}
+message CallFunctionResponse{
+    // 0:success
+    int32 code = 1;
+    string msg = 2;
+    optional google.protobuf.Struct output = 3;
+}
