@@ -1,7 +1,15 @@
-pub mod grpc;
+mod grpc;
 #[cfg(feature = "grpc")]
 pub mod proto;
 mod py_runtime;
+
+#[cfg(feature = "grpc")]
+pub use grpc::common;
+
+#[cfg(feature = "server")]
+pub use grpc::server;
+#[cfg(feature = "client")]
+pub use grpc::client;
 
 #[cfg(test)]
 mod tests {
