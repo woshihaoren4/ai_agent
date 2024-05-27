@@ -13,6 +13,7 @@ pub use grpc::client;
 
 #[cfg(test)]
 mod tests {
+    use serde::{Deserialize, Serialize};
     use crate::grpc;
 
     //cargo test tests::build
@@ -87,7 +88,7 @@ mod tests {
     /// ## example 3
     /// {
     //   "src": 0,
-    //   "script_code": "import sys\n\ndef handle(input):\n  print(\"python =>\",input)\n  version = sys.version\n  return {\"code\":0,\"msg\":\"success\",\"version\":version}\n",
+    //   "SCRIPT_CODE": "import sys\n\ndef handle(input):\n  print(\"python =>\",input)\n  version = sys.version\n  return {\"code\":0,\"msg\":\"success\",\"version\":version}\n",
     //   "module_name": "handle",
     //   "function_name": "handle",
     //   "function_input": {
@@ -106,5 +107,37 @@ mod tests {
             .run("[::1]:50001")
             .await
             .unwrap();
+    }
+
+    #[derive(Debug,Default,Serialize)]
+    struct PyRequest{
+        input:String
+    }
+
+    #[derive(Debug,Default,Deserialize)]
+    struct PyResponse{
+        version:String,
+    }
+
+    const SCRIPT_CODE:&'static str = r#"
+import sys
+
+def handle(input):
+    print("python =>",input)
+    version = sys.version
+    return {"version":version}
+    "#;
+
+    #[tokio::test]
+    async fn run_client() {
+        let resp = grpc::client::Client::new("http://127.0.0.1:50001")
+            .await.unwrap()
+            .eval_script_code::<_,_,_,PyResponse>(SCRIPT_CODE,"handle",serde_json::json!({
+                "input":"hello world"
+            }))
+            .await
+            .unwrap();
+        assert_eq!(true,resp.version.contains("3.11.9"));
+        println!("--->{:?}",resp);
     }
 }

@@ -103,6 +103,6 @@ mod test{
 
     #[tokio::test]
     async  fn test_client(){
-        let client = Client::new("http://[::1]:50001").await.unwrap();
+        let _client = Client::new("http://[::1]:50001").await.unwrap();
     }
 }
