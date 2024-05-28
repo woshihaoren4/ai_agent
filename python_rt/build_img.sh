@@ -25,6 +25,7 @@
   mv src/main_back.rs src/main.rs
   echo "cd ../"
   cd ../
+  mv target ../target
 
 #  echo "clean bin file:rm ../target/x86_64-unknown-linux-musl/release/python_rt"
 #  rm ../target/x86_64-unknown-linux-musl/release/python_rt
@@ -51,11 +52,13 @@
   ${build_cmd}
 
   echo "cd python_rt"
+  mv target ../target
   cd python_rt
   echo "mv src/lib_back.rs src/lib.rs"
   mv src/lib_back.rs src/lib.rs
   echo "mv src/main.rs src/main_back.rs"
   mv src/main.rs src/main_back.rs
+
 
 
   echo "docker build success image:$tag"

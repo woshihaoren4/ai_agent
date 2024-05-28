@@ -16,17 +16,18 @@ def get_system_info(nil):
     return system_info
 
 def generate_system_report(system_info):
+    data=system_info.data
     report = f"""
 系统报告：
 
-操作系统类型: {system_info['os_type']}
-操作系统版本: {system_info['os_release']}
-CPU逻辑核心数: {system_info['cpu_count']}
-CPU使用率: {system_info['cpu_percent']}%
-内存总量: {system_info['memory_total']} MB
-可用内存: {system_info['memory_available']} MB
-磁盘总量: {system_info['disk_total']} GB
-磁盘已使用: {system_info['disk_used']} GB
-磁盘剩余: {system_info['disk_free']} GB
+操作系统类型: {data['os_type']}
+操作系统版本: {data['os_release']}
+CPU逻辑核心数: {data['cpu_count']}
+CPU使用率: {data['cpu_percent']}%
+内存总量: {data['memory_total']} MB
+可用内存: {data['memory_available']} MB
+磁盘总量: {data['disk_total']} GB
+磁盘已使用: {data['disk_used']} GB
+磁盘剩余: {data['disk_free']} GB
     """
     return report

@@ -8,6 +8,7 @@ use crate::grpc::common::{prost_struct_to_serde_value, serde_value_to_prost_stru
 use crate::proto::proto::{CallFunctionRequest, CallFunctionResponse, SrcType};
 use crate::proto::proto::python_runtime_service_client::PythonRuntimeServiceClient;
 
+#[derive(Clone)]
 pub struct Client{
     pub pool:Arc<ObjPool<PythonRuntimeServiceClient<Channel>>>
 }

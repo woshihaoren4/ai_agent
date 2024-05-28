@@ -1,6 +1,6 @@
-// mod memory_ex;
-// mod prompt_ex;
-// mod fine_turning;
+// connect memory_ex;
+// connect prompt_ex;
+// connect fine_turning;
 
 #[tokio::main]
 async fn main() {

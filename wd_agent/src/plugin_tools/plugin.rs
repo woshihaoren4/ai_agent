@@ -1,4 +1,4 @@
-use crate::plugin_tools::{ToolFunction, ToolHttp};
+use crate::plugin_tools::{ToolFunction, ToolHttp, ToolPython};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
@@ -16,16 +16,26 @@ pub enum Oauth {
 #[derive(Clone)]
 pub enum Tool {
     Http(ToolHttp),
-    Python,
+    Python(ToolPython),
     Custom(Arc<dyn ToolFunction + Sync + 'static>),
+}
+
+impl Tool {
+    pub fn is_py(&self)->bool{
+        if let Tool::Python(_) = self{
+            true
+        }else{
+            false
+        }
+    }
 }
 
 impl Debug for Tool {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Tool::Http(h) => h.fmt(f),
-            Tool::Python => {
-                write!(f, "[Tool.Python] this tool is python script")
+            Tool::Python(r) => {
+                write!(f, "[Tool.Python] this tool is python script --->{:?}<---",r.req.script_code)
             }
             Tool::Custom(_) => {
                 write!(f, "[Tool.Custom] this tool is function")
@@ -59,12 +69,6 @@ where
     }
 }
 
-#[derive(Debug)]
-pub struct ToolPython {
-    pub import: Vec<String>,
-    pub script: String,
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct Plugin {
     pub auth: Option<Oauth>,
@@ -76,7 +80,17 @@ impl Plugin {
     pub async fn call(mut self, tool_name: &str, args: String) -> anyhow::Result<String> {
         let tool = match self.tools.remove(tool_name) {
             Some(s) => s,
-            None => return anyhow::anyhow!("plugin:api[{}] not found", tool_name).err(),
+            None => {
+                if let Some(s) = self.tools.remove("") {
+                    if s.is_py() {
+                        s
+                    }else{
+                        return anyhow::anyhow!("plugin:api[{}] not found", tool_name).err()
+                    }
+                }else{
+                    return anyhow::anyhow!("plugin:api[{}] not found", tool_name).err()
+                }
+            },
         };
         match tool {
             Tool::Http(htp) => {
@@ -88,8 +102,8 @@ impl Plugin {
                 };
                 htp.call(host, port, args, self.auth).await
             }
-            Tool::Python => {
-                todo!()
+            Tool::Python(py) => {
+                py.call(tool_name,args,self.auth).await
             }
             Tool::Custom(function) => function.call(args).await,
         }

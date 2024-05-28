@@ -9,6 +9,11 @@ pub enum ScriptSrc {
     #[default]
     ModuleName,
 }
+#[pyclass]
+pub struct FunctionInput{
+    #[pyo3(get, set)]
+    data:PyObject,
+}
 
 #[derive(Debug, Default)]
 pub struct PyScriptEntity {
@@ -56,7 +61,7 @@ impl PyScriptEntity {
         self
     }
     pub fn eval_function(&self, function_name: &str, args: Value) -> PyResult<Value> {
-        wd_log::log_debug_ln!("eval_function -> {:?}", self);
+        wd_log::log_debug_ln!("eval_function -> {:?} args:{:?}" , self,args);
         let Self {
             src,
             module_name,
@@ -84,8 +89,9 @@ impl PyScriptEntity {
             let function = module.getattr(function_name)?;
             //拼接输入
             let input_obj = Self::value_to_py_object(py, args)?;
+            let input_class = FunctionInput{data :input_obj};
             //调起函数
-            let output_obj = function.call((input_obj,), None)?.extract::<PyObject>()?;
+            let output_obj = function.call((input_class,), None)?.extract::<PyObject>()?;
             //输出转格式
             let value = Self::py_object_to_value(output_obj, py)?;
             Ok(value)
@@ -187,7 +193,7 @@ import sys
 def handle(input):
     print("python =>",input)
     version = sys.version
-    return {"code":0,"msg":"success","version":version}
+    return {"code":input.data['code'],"msg":"success","version":version}
     "#;
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -203,13 +209,13 @@ def handle(input):
 
         let mut map = Map::new();
         map.insert("hello".into(), Value::String("world".into()));
-        map.insert("num".into(), Value::Number(Number::from(1)));
+        map.insert("code".into(), Value::Number(Number::from(1)));
         map.insert("obj".into(), Value::Null);
 
         let value = entity.eval_function("handle", Value::Object(map)).unwrap();
         let resp = serde_json::from_value::<Response>(value).unwrap();
         println!("--->{:?}", resp);
-        assert_eq!(0, resp.code);
+        assert_eq!(1, resp.code);
         assert_eq!("success", resp.msg);
         assert_eq!(true, resp.version.is_some());
     }
@@ -221,7 +227,7 @@ def handle(input):
         let value = entity
             .eval_function("get_system_info", Value::Null)
             .unwrap();
-        println!("sys info --->{}", value);
+        println!("sys infra --->{}", value);
         let report = entity
             .eval_function("generate_system_report", value)
             .unwrap();

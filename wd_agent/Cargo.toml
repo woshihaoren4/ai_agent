@@ -21,7 +21,9 @@ async-channel.workspace = true
 async-trait.workspace = true
 serde.workspace = true
 async-openai.workspace = true
-agent_rt = {path = "../agent_rt",version = "0.1"}
 futures.workspace = true
 reqwest.workspace = true
 wd_event.workspace = true
+lazy_static.workspace = true
+agent_rt = {path = "../agent_rt",version = "0.1"}
+python_rt = {path = "../python_rt",version = "0.1",features = ["client"]}

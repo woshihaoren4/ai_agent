@@ -84,30 +84,53 @@ impl PluginSchedule for PluginControlSchedule {
     }
 }
 
+
+
 #[cfg(test)]
 mod test {
-    use crate::plugin_tools::{PluginControl, PluginControlSchedule};
+    use crate::plugin_tools::{init_py_rt_client, PluginControl, PluginControlSchedule};
+    use crate::py;
     use crate::rt_node_service::ToolEvent;
+    use crate::plugin_tools::ToolPython;
+
+    const PY_SCRIPT_CODE:&'static str = r#"
+def sms_send(msg):
+    data=msg.data
+    print("send msg:",data["content"])
+    return {"id":data["id"],"result":"success"}
+    "#;
 
     #[tokio::test]
     async fn test_schedule() {
+
+        init_py_rt_client("http://127.0.0.1:50001").await;
+
         let plugin: PluginControl = PluginControlSchedule::default()
             .register_plugin("test_function_plugin", |x| async move {
                 println!("test_function_plugin ===>{}", x);
                 Ok(x)
             })
+            .register_plugin("test_py_plugin",py!(PY_SCRIPT_CODE))
             .try_register_plugin("test_http_api", ("get", "https://www.baidu.com"))
             .unwrap()
             .into();
+
         let result = plugin
             .call("test_function_plugin.", "hello world".to_string())
             .await
             .unwrap();
         assert_eq!("hello world", result.as_str());
+
         let htp = plugin
             .call("test_http_api", "hello".to_string())
             .await
             .unwrap();
-        println!("---->\n{htp}")
+        println!("---->\n{htp}");
+
+        let py = plugin
+            .call("test_py_plugin.sms_send",r#"{"id":2024042701001,"content":"this is a py script"}"#.into())
+            .await
+            .unwrap();
+        println!("---->\n{py}");
     }
 }
