@@ -88,7 +88,6 @@ impl PluginSchedule for PluginControlSchedule {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
     use crate::plugin_tools::{init_py_rt_client, PluginControl, PluginControlSchedule};
     use crate::py;
     use crate::rt_node_service::ToolEvent;

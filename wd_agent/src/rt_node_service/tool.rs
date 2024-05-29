@@ -3,6 +3,10 @@ use agent_rt::{Context, ServiceLayer};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::rt_node_service::in_out_bonding::CfgBound;
+use crate::var_auto_inject;
+use serde_json::Value;
+use crate::rt_node_service::VarFill;
 
 #[async_trait::async_trait]
 pub trait ToolEvent: Send {
@@ -36,8 +40,10 @@ impl Default for ToolService {
 pub struct LLMToolCallRequest {
     pub call_id: Option<String>,
     pub name: String,
-    pub args: Option<String>,
+    #[serde(default="String::default")]
+    pub args:String,
 }
+var_auto_inject!(LLMToolCallRequest.args);
 impl LLMToolCallRequest {
     pub fn as_json(&self) -> String {
         serde_json::to_string(self).unwrap()
@@ -53,15 +59,17 @@ pub struct LLMToolCallResponse {
 
 #[async_trait::async_trait]
 impl ServiceLayer for ToolService {
-    type Config = LLMToolCallRequest;
+    type Config = CfgBound<LLMToolCallRequest>;
     type Output = LLMToolCallResponse;
 
     async fn call(
         &self,
         code: String,
-        _ctx: Arc<Context>,
+        ctx: Arc<Context>,
         cfg: Self::Config,
     ) -> anyhow::Result<Self::Output> {
+        let cfg = cfg.init(&ctx)?;
+
         let LLMToolCallRequest {
             call_id,
             name,
@@ -71,7 +79,7 @@ impl ServiceLayer for ToolService {
 
         let content = self
             .loader
-            .call(name.as_str(), args.unwrap_or("".to_string()))
+            .call(name.as_str(), args)
             .await?;
 
         let resp = LLMToolCallResponse { call_id, content };
