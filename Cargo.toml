@@ -1,5 +1,6 @@
 [workspace]
-members = ["wd_agent", "example", "agent_rt", "python_rt"]
+members = ["wd_agent", "agent_rt", "python_rt", "webui"]
+resolver = "2"
 
 [workspace.package]
 edition = "2021"
@@ -11,17 +12,12 @@ license = "MIT"
 readme = "README.md"
 
 [workspace.dependencies]
-wd_tools = {version = "0.13.6",features = ["point-free","sync","ptr","md5","hex","time","http","b64","pool"]}
+wd_tools = {version = "0.13.7",features = ["point-free","sync","ptr","md5","hex","time","http","b64","pool"]}
+wd_log = "0.3.0"
 anyhow = "1.0.75"
+async-trait = "0.1.77"
 serde = {version = "1.0.188",features = ["derive"]}
 serde_json = "1.0.105"
 tokio = {version = "1",features = ["full"]}
-async-channel = "2.2.0"
-wd_log = "0.3.0"
-async-trait = "0.1.77"
-async-openai = "0.21.0"
 lazy_static = "1.4.0"
-bytes = "1.5.0"
 futures = "0.3.30"
-reqwest = "0.12.4"
-wd_event = "0.6.1"

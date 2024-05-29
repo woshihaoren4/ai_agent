@@ -16,7 +16,8 @@ anyhow.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 wd_tools.workspace = true
-async-channel.workspace = true
 wd_log.workspace = true
 async-trait.workspace = true
 serde.workspace = true
+
+async-channel = "2.2.0"
