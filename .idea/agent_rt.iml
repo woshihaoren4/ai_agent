@@ -9,6 +9,8 @@
       <sourceFolder url="file://$MODULE_DIR$/agent_rt/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/agent_rt/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/python_rt/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/webui/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/webui/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/wd_agent/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
