@@ -16,3 +16,4 @@ Cargo.lock
 .idea
 
 webui/dict/
+webui/server/.idea
