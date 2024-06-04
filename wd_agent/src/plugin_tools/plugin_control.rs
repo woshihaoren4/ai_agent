@@ -79,7 +79,7 @@ impl PluginSchedule for PluginControlSchedule {
         if let Some(ref schedule) = self.extend {
             return schedule.schedule(plugin_name, tool_name).await;
         } else {
-            return anyhow::anyhow!("not found plugin[{}]", plugin_name).err();
+            return anyhow::anyhow!("not found plugin_view[{}]", plugin_name).err();
         }
     }
 }

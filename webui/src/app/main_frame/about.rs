@@ -39,12 +39,12 @@ impl MainView for FrameAbout<'_>{
                 });
                 //折叠显示
                 // #[cfg(target_arch = "wasm32")]
-                // ui.collapsing("Web info (location)", |ui| {
-                //     ui.monospace(format!("{:#?}", frame.info().web_info.location));
+                // ui.collapsing("Web infra (location)", |ui| {
+                //     ui.monospace(format!("{:#?}", frame.infra().web_info.location));
                 // });
                 //不折叠显示
-                // #[cfg(target_arch = "wasm32")]
-                egui::CollapsingHeader::new("Web info (location)")
+                #[cfg(target_arch = "wasm32")]
+                egui::CollapsingHeader::new("Web infra (location)")
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.monospace(format!("{:#?}", frame.info().web_info.location));

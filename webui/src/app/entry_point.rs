@@ -1,5 +1,4 @@
-use std::process::Command;
-use crate::app::main_frame;
+use crate::app::{sys_setting};
 use crate::app::main_frame::AppEntity;
 use crate::app::state::State;
 
@@ -19,10 +18,21 @@ impl Default for AiAgentApp {
 
 impl AiAgentApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        sys_setting::sys_set(&cc.egui_ctx);
         if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            let state = match eframe::get_value::<State>(storage, eframe::APP_KEY) {
+                None => {
+                    let mut state = State::default();
+                    state.debug_win.info("not found app from localstorage");
+                    state
+                }
+                Some(s) => {s}
+            };
+            return AiAgentApp{state}
         }
-        Default::default()
+        let mut app = AiAgentApp::default();
+        app.state.debug_win.info("create a default app");
+        app
     }
 }
 
@@ -32,7 +42,7 @@ impl eframe::App for AiAgentApp {
             .update(ctx,frame,&mut self.state)
     }
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
+        eframe::set_value(storage, eframe::APP_KEY, &self.state);
     }
     fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
         // Give the area behind the floating windows a different color, because it looks better:

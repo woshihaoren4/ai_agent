@@ -1,0 +1,46 @@
+{
+    "plugin_list":[
+        {
+            "code":"openai-LLM",
+            "class":"LLM",
+            "desc":"openai LLM chat",
+            "ui_type":"window",
+            "service_type":"openai-llm",
+            "input_vars": {
+                "version":{
+                    "type":"string",
+                    "default":"gpt-32k"
+                },
+                "temperature":{
+                    "type":"f32",
+                    "default": 0.7,
+                    "desc":"The randomness of the model generated responses",
+                    "ui_slider": {
+                        "max": 2.0,
+                        "min": 0.0,
+                        "speed": 0.01
+                    }
+                },
+                "prompt":{
+                    "type":"string",
+                    "default":"",
+                    "ui_type":"text_edit_multi"
+                },
+                "query":{
+                    "type":"string",
+                    "default":"",
+                    "required":true
+                }
+            },
+            "output_vars": {
+                "answer": "this is text",
+                "tools": [
+                    {
+                        "function_name": "tool name",
+                        "args": "function call args"
+                    }
+                ]
+            }
+        }
+    ]
+}

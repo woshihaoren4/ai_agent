@@ -1,0 +1,25 @@
+{
+    "plugin_list":[
+        {
+            "code":"python",
+            "class":"script",
+            "desc":"a python service",
+            "ui_type":"window",
+            "service_type":"python",
+            "input_vars": {
+                "version":{
+                    "type":"string",
+                    "default":"3.11.9",
+                    "immobilization":true
+                },
+                "code":{
+                    "type":"string",
+                    "default":"",
+                    "required":true,
+                    "ui_type":"script_code"
+                }
+            },
+            "output_vars": "The code output prevails!"
+        }
+    ]
+}

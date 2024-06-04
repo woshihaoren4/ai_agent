@@ -1,8 +1,8 @@
-use eframe::emath::Pos2;
 use eframe::Frame;
 use egui::{Context, Widget};
 use crate::app::main_frame::MainView;
-use crate::app::state::{State, Node};
+use crate::app::plugin_view::TopControlTools;
+use crate::app::state::{State};
 
 #[derive(Debug)]
 pub struct ControlTools{
@@ -17,58 +17,6 @@ impl Default for ControlTools{
 }
 
 impl ControlTools {
-    fn ui(&mut self, ctx: &Context, frame: &mut Frame, cfg: &mut State) {
-        // self.ui_file_drag_and_drop(ctx)
-        //渲染工作节点
-        egui::TopBottomPanel::top("service node")
-            .resizable(false)
-            .show(ctx,|ui|{
-                //llm
-                ui.horizontal_wrapped(|ui|{
-                    ui.menu_button("LLM",|ui|{
-                        if ui.button("openai-llm").clicked(){
-                            cfg.plugin.add_node(Node::new("openai-LLM", "this is a LLM Node"));
-                        }
-                        if ui.button("llama 3").clicked(){
-
-                        }
-                        if ui.button("zhipu-glm").clicked(){
-
-                        }
-                    });
-                    if ui.button("clean").clicked() {
-                        cfg.plugin.node_tree.clear();
-                    }
-                });
-            });
-
-        egui::SidePanel::right("")
-            // .resizable(false)
-            .show(ctx,|ui|{
-                ui.vertical_centered(|ui| {
-                    for (_,i) in cfg.plugin.node_tree.iter_mut(){
-                        if ui.button(i.code.as_str()).clicked() {
-                            i.open = !i.open;
-                        }
-                    }
-                });
-
-            });
-
-        for (_,i) in cfg.plugin.node_tree.iter_mut(){
-            egui::Window::new(self.name())
-                .default_width(320.0)
-                .default_height(480.0)
-                .open(&mut i.open)
-                // .title_bar(false)
-                .resizable([true, false])
-                .show(ctx, |ui| {
-                    ui.heading(i.code.as_str());
-                    ui.separator();
-                    ui.label(i.desc.as_str());
-                });
-        }
-    }
 
 }
 
@@ -85,22 +33,30 @@ impl MainView for ControlTools{
             .show(ctx,|ui|{
                 //llm
                 ui.horizontal_wrapped(|ui|{
-                    ui.menu_button("LLM",|ui|{
-                        if ui.button("openai-llm").clicked(){
-                            cfg.plugin.add_node(Node::new("openai-LLM", "this is a LLM Node"));
-                        }
-                        if ui.button("llama 3").clicked(){
-
-                        }
-                        if ui.button("zhipu-glm").clicked(){
-
-                        }
-                    });
+                    let mut services = vec![];
+                    for (name,i) in cfg.plugin.services.iter(){
+                        ui.menu_button(name,|ui|{
+                            for i in i.iter(){
+                                if ui.button(i.code.as_str()).clicked() {
+                                    services.push(i.clone());
+                                    cfg.debug_win.debug(format!("create a node: {}", i.code).as_str());
+                                    // cfg.plugin_view.add_node(i.clone());
+                                }
+                            }
+                        });
+                    };
+                    for i in services{
+                        cfg.plugin.add_node(i);
+                    }
+                    ui.separator();
                     if egui::Button::new("clean").fill(egui::Color32::RED).ui(ui).clicked() {
                         cfg.plugin.node_tree.clear();
                     }
                     if egui::Button::new("reset").fill(egui::Color32::RED).ui(ui).clicked(){
                         *cfg = Default::default();
+                    }
+                    if egui::Button::new("save").fill(egui::Color32::RED).ui(ui).clicked(){
+                        eframe::set_value(frame.storage_mut().unwrap(), eframe::APP_KEY, cfg);
                     }
                 });
 
@@ -110,10 +66,21 @@ impl MainView for ControlTools{
             // .resizable(false)
             .show(ctx,|ui|{
                 ui.vertical_centered(|ui| {
-                    for (_,i) in cfg.plugin.node_tree.iter_mut(){
-                        if ui.button(i.code.as_str()).clicked() {
-                            i.open = !i.open;
-                        }
+                    let mut del_list = vec![];
+                    for (name,i) in cfg.plugin.nodes.iter_mut() {
+                        ui.horizontal(|ui|{
+                            if ui.button(name).clicked() {
+                                i.open = !i.open;
+                            }
+                            ui.separator();
+                            if ui.button(egui::WidgetText::RichText(egui::RichText::new("> delete")).background_color(egui::Color32::RED)).clicked(){
+                                del_list.push(name.clone());
+                            }
+                        });
+                    }
+                    //删除
+                    for i in del_list {
+                        cfg.plugin.nodes.remove(i.as_str());
                     }
                     ui.separator();
                     //渲染任务流
@@ -124,25 +91,7 @@ impl MainView for ControlTools{
 
             });
         //渲染已存在的节点
-        for (_,i) in cfg.plugin.node_tree.iter_mut(){
-            egui::Window::new(i.code.as_str())
-                .default_pos(Pos2::new(100.0,100.0))
-                .default_width(320.0)
-                .default_height(480.0)
-                .open(&mut i.open)
-                // .title_bar(false)
-                // .resizable([true, false])
-                .show(ctx, |ui| {
-                    ui.label(i.desc.as_str());
-                    ui.separator();
-                    ui.label("next nodes:");
-                    let mut s = i.next_nodes.join(",");
-                    egui::TextEdit::singleline(&mut s)
-                        .hint_text("node-1,node-2")
-                        .ui(ui);
-                    i.next_nodes = s.split(",").map(|s|s.to_string()).collect();
-                });
-        }
+        TopControlTools::ui(ctx,cfg);
     }
 
 }

@@ -1,17 +1,15 @@
 use eframe::Frame;
 use egui::*;
 use egui::emath::TSTransform;
-use egui::epaint::PathShape;
 use crate::app::main_frame::MainView;
 use crate::app::state::State;
 
 #[derive(Debug)]
 pub struct WorkFlowView {
-    open :bool
 }
 impl Default for WorkFlowView {
     fn default() -> Self {
-        Self{open:true}
+        Self{}
     }
 }
 
@@ -119,7 +117,7 @@ impl WorkFlowView {
                                 }
                             }
 
-                            // let shape = egui::Shape::line(cfg.plugin.node_pos.clone(),Stroke::new(1.0,egui::Color32::BLACK));
+                            // let shape = egui::Shape::line(cfg.plugin_view.node_pos.clone(),Stroke::new(1.0,egui::Color32::BLACK));
                             // let idx = ui.painter().add(shape);
                         });
                 })
@@ -128,9 +126,9 @@ impl WorkFlowView {
             ui.ctx().set_transform_layer(lid, transform);
 
             //划线
-            // for i in 0..cfg.plugin.node_pos.len() - 2{
-            //     let p1 = cfg.plugin.node_pos[i].clone();
-            //     let p2 = cfg.plugin.node_pos[i+1].clone();
+            // for i in 0..cfg.plugin_view.node_pos.len() - 2{
+            //     let p1 = cfg.plugin_view.node_pos[i].clone();
+            //     let p2 = cfg.plugin_view.node_pos[i+1].clone();
             //     Self::draw_line_between_buttons(ui.painter(),p1,p2);
             // }
         // });
@@ -142,7 +140,7 @@ impl MainView for WorkFlowView {
         ""
     }
 
-    fn update(&mut self, ctx: &Context, frame: &mut Frame, cfg: &mut State) {
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame, cfg: &mut State) {
         let mut open = cfg.work_plan.open;
         egui::Window::new("WorkFlow-view")
             .default_width(500.0)

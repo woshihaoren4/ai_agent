@@ -85,10 +85,10 @@ impl Plugin {
                     if s.is_py() {
                         s
                     }else{
-                        return anyhow::anyhow!("plugin:api[{}] not found", tool_name).err()
+                        return anyhow::anyhow!("plugin_view:api[{}] not found", tool_name).err()
                     }
                 }else{
-                    return anyhow::anyhow!("plugin:api[{}] not found", tool_name).err()
+                    return anyhow::anyhow!("plugin_view:api[{}] not found", tool_name).err()
                 }
             },
         };
@@ -97,7 +97,7 @@ impl Plugin {
                 let (host, port) = if let Some(s) = self.server {
                     s
                 } else {
-                    // return anyhow::anyhow!("plugin:api[{}] http tool but grpc is nil",tool_name).err()
+                    // return anyhow::anyhow!("plugin_view:api[{}] http tool but grpc is nil",tool_name).err()
                     ("".to_string(), 0)
                 };
                 htp.call(host, port, args, self.auth).await

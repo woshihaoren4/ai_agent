@@ -1,0 +1,33 @@
+{
+    "code":"zhipu-glm",
+    "class":"LLM",
+    "service_type":"zhipu-glm",
+    "desc":"智谱清言 GLM模型",
+    "ui_type":"window",
+    "input_vars": {
+        "temperature":{
+            "type":"f32",
+            "default": 1.0,
+            "desc":"The randomness of the model generated responses"
+        },
+        "prompt":{
+            "type":"string",
+            "default":"",
+            "ui_type":"text_edit_multi"
+        },
+        "query":{
+            "type":"string",
+            "default":"",
+            "required":true
+        }
+    },
+    "output_vars": {
+        "answer": "this is text",
+        "tools": [
+            {
+                "function_name": "tool name",
+                "args": "function call args"
+            }
+        ]
+    }
+}

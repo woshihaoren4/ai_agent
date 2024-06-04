@@ -1,15 +1,16 @@
-use eframe::emath::Pos2;
-use eframe::epaint::{Shape, Stroke};
+use eframe::emath::{Align};
 use crate::app::main_frame::about::FrameAbout;
 use crate::app::main_frame::work_flow_view::WorkFlowView;
 use crate::app::main_frame::setting::FrameSetting;
 use crate::app::main_frame::control_tools::ControlTools;
+use crate::app::main_frame::project::Project;
 use crate::app::state::{State};
 
 mod setting;
 mod about;
 mod control_tools;
 mod work_flow_view;
+mod project;
 
 pub trait MainView {
     fn name(&self)->&str;
@@ -26,6 +27,7 @@ impl Default for AppEntity{
         let tool_control = ControlTools::default();
         let work_space = WorkFlowView::default();
         let mut items:Vec<Box<dyn MainView>> = vec![];
+        items.push(Box::new(Project::default()));
         items.push(Box::new(FrameSetting::default()));
         items.push(Box::new(FrameAbout::default()));
         // items.push(Box::new(ControlTools::default()));
@@ -61,17 +63,19 @@ impl AppEntity {
                 cfg.layout_config.selected_anchor = selected_anchor.to_string();
             });
         });
+        //底部
+        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
+            ui.with_layout(egui::Layout::top_down(Align::Min), |ui| {
+                ui.label(cfg.debug_win.log.as_str());
+            });
+        });
         //绘制中部
         for i in self.items.iter_mut(){
             i.update(ctx,frame,cfg);
         }
         //创建工具栏
         self.tool_control.update(ctx,frame,cfg);
-        //创建工作区
+        //创建工作区tr
         self.work_space.update(ctx,frame,cfg);
-        //绘制底部
-
-
-
     }
 }
