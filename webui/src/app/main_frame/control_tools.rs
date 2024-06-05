@@ -41,7 +41,7 @@ impl MainView for ControlTools{
                     }
                     ui.separator();
                     if egui::Button::new("clean").fill(egui::Color32::RED).ui(ui).clicked() {
-                        cfg.plugin.node_tree.clear();
+                        cfg.plugin.nodes.clear();
                     }
                     if egui::Button::new("reset").fill(egui::Color32::RED).ui(ui).clicked(){
                         *cfg = Default::default();

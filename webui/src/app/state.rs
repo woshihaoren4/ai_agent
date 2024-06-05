@@ -103,8 +103,6 @@ pub struct Plugin {
     pub tools_loader: HttpJsonPromise,
     pub services:BTreeMap<String,Vec<PluginService>>,
     pub nodes:BTreeMap<String,PluginServiceWin>,
-    pub node_tree:BTreeMap<String,Node>,
-    pub node_pos:Vec<Pos2>,
 }
 
 impl Plugin {
@@ -133,6 +131,12 @@ pub struct PluginServiceWin{
     pub open : bool,
     #[serde(default)]
     pub pos:Pos2,
+
+    #[serde(default)]
+    pub input_pos:Pos2,
+    #[serde(default)]
+    pub output_pos:Pos2,
+
     #[serde(default)]
     pub service:PluginService,
 
@@ -140,8 +144,6 @@ pub struct PluginServiceWin{
     pub goto:Vec<String>,
     #[serde(default)]
     pub goto_select:String,
-    #[serde(default)]
-    pub goto_text:String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -210,38 +212,4 @@ pub struct UISlider{
 pub struct WorkPlan {
     pub open:bool,
     pub transform: TSTransform,
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-#[derive(Debug,Default)]
-pub struct Node {
-    pub code:String,
-    pub desc:String,
-    pub open:bool,
-    pub input_post:Pos2,
-    pub output_post:Pos2,
-    pub config: NodeConfig,
-    //通往哪个节点
-    pub next_nodes:Vec<String>,
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-#[derive(Debug,Default)]
-pub struct NodeConfig{
-
-}
-
-
-
-impl Node {
-    pub fn new<C:Into<String>,D:Into<String>>(code:C,desc:D)->Self{
-        Self{
-            code: code.into(),
-            desc: desc.into(),
-            open: true,
-            ..Default::default()
-        }
-    }
 }
