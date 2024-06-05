@@ -4,20 +4,11 @@ use crate::app::main_frame::MainView;
 use crate::app::plugin_view::TopControlTools;
 use crate::app::state::{State};
 
-#[derive(Debug)]
+#[derive(Debug,Default)]
 pub struct ControlTools{
-
-}
-
-
-impl Default for ControlTools{
-    fn default() -> Self {
-        Self{}
-    }
 }
 
 impl ControlTools {
-
 }
 
 impl MainView for ControlTools{
@@ -55,8 +46,9 @@ impl MainView for ControlTools{
                     if egui::Button::new("reset").fill(egui::Color32::RED).ui(ui).clicked(){
                         *cfg = Default::default();
                     }
-                    if egui::Button::new("save").fill(egui::Color32::RED).ui(ui).clicked(){
+                    if egui::Button::new("save").fill(egui::Color32::GREEN).ui(ui).clicked(){
                         eframe::set_value(frame.storage_mut().unwrap(), eframe::APP_KEY, cfg);
+                        cfg.debug_win.info("save success")
                     }
                 });
 

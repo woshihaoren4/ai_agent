@@ -66,7 +66,7 @@ impl AppEntity {
         //底部
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.with_layout(egui::Layout::top_down(Align::Min), |ui| {
-                ui.label(cfg.debug_win.log.as_str());
+                ui.label(format!("[{}] {}",cfg.debug_win.level,cfg.debug_win.log));
             });
         });
         //绘制中部

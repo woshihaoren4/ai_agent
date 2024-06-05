@@ -18,7 +18,9 @@ impl NumberSlider{
                 field.value = field.default.clone();
                 //init value speed
                 field.ui_slider.as_mut().unwrap().slider_value = field.default.as_f64().unwrap_or(0.0);
-                field.ui_slider.as_mut().unwrap().speed = 1.0;
+                if field.ui_slider.as_mut().unwrap().speed < 0.0001 {
+                    field.ui_slider.as_mut().unwrap().speed = 1.0
+                }
             }else{
                 field.value = Value::Number(Number::from_f64(0.0).unwrap())
             }

@@ -48,6 +48,15 @@ impl MainView for Project{
                             }
                         }
                         ui.end_row();
+
+                        ui.label("auto save interval:");
+                        let drag = egui::DragValue::new(&mut cfg.project_cfg.auto_save_interval)
+                            .speed(0.1)
+                            .suffix("s")
+                            .clamp_range(1..=100);
+                        ui.add(drag);
+                        ui.end_row()
+
                     });
             });
         return;

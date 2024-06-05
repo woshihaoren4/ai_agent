@@ -5,15 +5,14 @@ use serde_json::Value;
 use crate::infra::HttpJsonPromise;
 
 #[derive(serde::Deserialize, serde::Serialize)]
-#[derive(Default)]
 #[serde(default)]
+#[derive(Default)]
 pub struct State{
     pub layout_config:AppLayoutConfig,
     pub setting:Setting,
     pub project_cfg: ProjectConfig,
     pub plugin: Plugin,
     pub work_plan: WorkPlan,
-
     pub debug_win: DebugCfg,
 }
 
@@ -24,18 +23,24 @@ pub struct ProjectConfig {
     //从哪个位置加载工具栏
     #[serde(default="ProjectConfig::default_server_addr")]
     pub server_addr:String,
+    #[serde(default="ProjectConfig::default_auto_save_interval")]
+    pub auto_save_interval:usize,
 }
 
 impl Default for ProjectConfig {
     fn default() -> Self {
         let server_addr = Self::default_server_addr();
-        Self{server_addr}
+        let auto_save_interval = Self::default_auto_save_interval();
+        Self{server_addr,auto_save_interval}
     }
 }
 
 impl ProjectConfig {
     pub fn default_server_addr()->String{
         "http://127.0.0.1:50000".into()
+    }
+    pub fn default_auto_save_interval()->usize{
+        30
     }
 }
 

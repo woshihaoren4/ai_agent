@@ -1,3 +1,4 @@
+use std::time::Duration;
 use crate::app::{sys_setting};
 use crate::app::main_frame::AppEntity;
 use crate::app::state::State;
@@ -44,6 +45,16 @@ impl eframe::App for AiAgentApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, &self.state);
     }
+
+    fn auto_save_interval(&self) -> Duration {
+        if self.state.project_cfg.auto_save_interval <= 0 {
+            Duration::from_secs(5)
+        }else{
+            Duration::from_secs(self.state.project_cfg.auto_save_interval as u64)
+        }
+
+    }
+
     fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
         // Give the area behind the floating windows a different color, because it looks better:
         let color = egui::lerp(
