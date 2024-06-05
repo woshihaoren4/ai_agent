@@ -24,7 +24,7 @@ impl TopControlTools{
 
                 }
                 "null" => {
-
+                    ui.label(format!("{name}: null"));
                 }
                 _ => {
                     ui.label(egui::WidgetText::RichText(RichText::new(format!("unknown field type [{}] !!!",var.r#type)).color(egui::Color32::RED)));

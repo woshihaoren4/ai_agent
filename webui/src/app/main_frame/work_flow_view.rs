@@ -30,6 +30,13 @@ impl WorkFlowView {
     fn make_node_area(id:egui::Id,ui:&mut egui::Ui,transform:&TSTransform,rect: Rect,name:&str,abnormal:bool)->(LayerId,Pos2,Pos2){
         let mut input_pos = Pos2::default();
         let mut output_pos = Pos2::default();
+
+       let fill = if abnormal {
+            egui::Color32::RED
+        }else{
+           ui.style().visuals.panel_fill
+       };
+
         let id = egui::Area::new(id.with(("flow_node-", name)))
             .default_pos(Pos2::new(100.0,100.0))
             .order(egui::Order::Foreground)
@@ -39,16 +46,18 @@ impl WorkFlowView {
                     .rounding(egui::Rounding::same(4.0))
                     .inner_margin(egui::Margin::same(8.0))
                     .stroke(ui.ctx().style().visuals.window_stroke)
-                    .fill(ui.style().visuals.panel_fill)
+                    .fill(fill)
                     .show(ui, |ui| {
                         ui.horizontal(|ui|{
-                            input_pos = ui.label("> ").rect.center();
-                            if abnormal {
-                                let _ = ui.button(egui::WidgetText::from(name).background_color(egui::Color32::RED)).on_hover_text("not found");
-                            }else{
-                                let _= ui.button(name);
-                            }
-                            output_pos = ui.label(" >").rect.center();
+                            input_pos = ui.label(">").rect.center();
+                            // if abnormal {
+                            //     ui.add(egui::Button::new(name).fill(fill));
+                            //     let _ = ui.button(name).;
+                            // }else{
+                            //     let _= ui.button(name);
+                            // }
+                                ui.add(egui::Button::new(name).fill(fill));
+                            output_pos = ui.label(">").rect.center();
                         });
                     });
             })
