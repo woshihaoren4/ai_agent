@@ -1,4 +1,4 @@
-use crate::rt_node_service::LLMToolCallRequest;
+use crate::rt_node_service::{CfgBound, LLMToolCallRequest};
 use agent_rt::Context;
 use async_openai::config::OpenAIConfig;
 use async_openai::types::{
@@ -11,10 +11,7 @@ use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::Arc;
-use serde_json::Value;
 use wd_tools::PFErr;
-use crate::rt_node_service::in_out_bonding::{CfgBound, VarFill};
-use crate::var_auto_inject;
 
 #[derive(Debug)]
 pub struct OpenaiLLMService {
@@ -41,8 +38,6 @@ pub struct LLMNodeRequest {
 
     pub query: String,
 }
-
-var_auto_inject!(LLMNodeRequest.prompt);
 
 impl LLMNodeRequest {
     fn max_tokens_length() -> u16 {
@@ -218,7 +213,7 @@ impl agent_rt::ServiceLayer for OpenaiLLMService {
         cfg: Self::Config,
     ) -> anyhow::Result<Self::Output> {
         // wd_log::log_debug_ln!("start call code[{}.{}.openai_llm]",ctx.code,code);
-        let cfg = cfg.init(&ctx)?;
+        let cfg = cfg.bound(&ctx)?;
         let req = cfg.to_openai_chat_request()?;
         let mut stream = self.openai_client.chat().create_stream(req).await?;
 

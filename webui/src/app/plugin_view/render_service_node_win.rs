@@ -1,5 +1,5 @@
 use egui::{Context, RichText};
-use crate::app::plugin_view::{GOTO, Output};
+use crate::app::plugin_view::{CustomInputField, GOTO, Output};
 use crate::app::state::{PluginService, PluginServiceWin, State};
 
 pub struct TopControlTools;
@@ -71,6 +71,7 @@ impl TopControlTools{
                     ui.separator();
                     ui.collapsing("INPUT",|ui|{
                         TopControlTools::render_input_vars(ui,service);
+                        CustomInputField::custom_input_ui(ui,service);
                     });
                     //渲染跳出
                     ui.collapsing("GOTO",|ui|{

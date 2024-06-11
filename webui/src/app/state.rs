@@ -163,9 +163,17 @@ pub struct PluginService {
     #[serde(default)]
     pub input_vars:BTreeMap<String,PluginToolInput>,
     #[serde(default)]
+    pub custom_input_var:Vec<CustomInputVar>,
+    #[serde(default)]
     pub output_vars:Value,
 }
-
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+#[derive(Debug,Default,Clone)]
+pub struct CustomInputVar{
+    pub name:String,
+    pub value:String,
+}
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 #[derive(Debug,Default,Clone)]
@@ -189,7 +197,10 @@ pub struct PluginToolInput{
 
     // type=number,
     #[serde(default)]
-    pub ui_slider: Option<UISlider>,
+    pub ui_extend_slider: Option<UISlider>,
+    // type=number,ui_type=enum
+    #[serde(default)]
+    pub ui_extend_enum: Option<Vec<String>>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]

@@ -3,7 +3,7 @@ use eframe::Frame;
 use egui::*;
 use egui::emath::TSTransform;
 use crate::app::main_frame::MainView;
-use crate::app::state::{PluginServiceWin, State};
+use crate::app::state::{State};
 
 #[derive(Debug)]
 pub struct WorkFlowView {
@@ -22,9 +22,15 @@ impl WorkFlowView {
         let p2 = Pos2::new(x,p1.y);
         let p3 = Pos2::new(x,p4.y);
 
+        //贝塞尔
         let cubic_bezier = egui::epaint::CubicBezierShape::from_points_stroke([p1, p2, p3, p4], false,egui::Color32::TRANSPARENT,Stroke::new(2.0, egui::Color32::BLACK));
-
         painter.add(cubic_bezier);
+
+        //箭头
+        let origin = Pos2::new(p4.x - 10.0,p4.y - 10.0);
+        painter.line_segment([origin,p4],Stroke::new(2.0, egui::Color32::BLACK));
+        let origin = Pos2::new(p4.x - 10.0,p4.y + 10.0);
+        painter.line_segment([origin,p4],Stroke::new(2.0, egui::Color32::BLACK));
     }
 
     fn make_node_area(id:egui::Id,ui:&mut egui::Ui,transform:&TSTransform,rect: Rect,name:&str,abnormal:bool)->(LayerId,Pos2,Pos2){
@@ -49,15 +55,19 @@ impl WorkFlowView {
                     .fill(fill)
                     .show(ui, |ui| {
                         ui.horizontal(|ui|{
-                            input_pos = ui.label(">").rect.center();
+                            //取左边中心点
+                            let rect = ui.label(">").rect;
+                            input_pos = egui::Pos2::new(rect.min.x-10.0,rect.center().y);
                             // if abnormal {
                             //     ui.add(egui::Button::new(name).fill(fill));
                             //     let _ = ui.button(name).;
                             // }else{
                             //     let _= ui.button(name);
                             // }
-                                ui.add(egui::Button::new(name).fill(fill));
-                            output_pos = ui.label(">").rect.center();
+                            ui.add(egui::Button::new(name).fill(fill));
+                            //取右边的最小点
+                            let rect = ui.label(">").rect;
+                            output_pos = egui::Pos2::new(rect.max.x+10.0,rect.center().y);
                         });
                     });
             })
@@ -126,7 +136,7 @@ impl WorkFlowView {
                     .fill(ui.style().visuals.panel_fill)
                     .show(ui, |ui| {
                         let mut not_found_list = HashMap::new();
-                        for (name,node) in cfg.plugin.nodes.iter(){
+                        for (_name,node) in cfg.plugin.nodes.iter(){
                             for i in node.goto.iter(){
                                 let next:Pos2 = match cfg.plugin.nodes.get(i) {
                                     None => {

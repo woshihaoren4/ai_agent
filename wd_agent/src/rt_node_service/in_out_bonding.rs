@@ -1,118 +1,168 @@
-use std::collections::VecDeque;
+use std::collections::{ VecDeque};
+use std::marker::PhantomData;
+use std::str::FromStr;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
+use wd_tools::{PFErr, SimpleRegexMatch};
 use agent_rt::Context;
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
-pub struct Var{
-    pub var_name:String,
-    pub from_position:String,
-    pub default:Option<Value>,
-}
-
-pub trait VarFill{
-    fn file_item(&mut self,var_name:String,value:Value)->anyhow::Result<()>;
-}
-
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
-pub struct CfgBound<T:VarFill> {
-    #[serde(default="Vec::new")]
-    pub input: Vec<Var>,
+pub struct CfgBound<T>{
     #[serde(flatten)]
-    pub data: T,
+    pub inner:Value,
+    #[serde(skip)]
+    pub _p :PhantomData<T>,
 }
 
-impl<T:VarFill> CfgBound<T>{
-    pub fn init(mut self, ctx:&Context) ->anyhow::Result<T>{
-        self.init_var_from_ctx(ctx);
-        let Self { input, mut data } = self;
-        for i in input {
-            if let Some(s) = i.default{
-                data.file_item(i.var_name,s)?;
+impl<T> CfgBound<T>
+    where T:for<'a> serde::Deserialize<'a>
+{
+    pub fn bound(self,ctx:&Context)->anyhow::Result<T>
+    {
+        let value = Self::bound_value(self.inner, ctx)?;
+        let t:T = serde_json::from_value(value)?;Ok(t)
+    }
+    fn bound_value(value:Value,ctx:&Context)->anyhow::Result<Value>{
+        match value {
+            // Value::Null => {}
+            // Value::Bool(_) => {}
+            // Value::Number(_) => {}
+            Value::String(mut s) => {
+                let a = s.as_str();
+                let list = Self::string_type(a).into_iter().map(|x|x.to_string()).collect::<Vec<String>>();
+                if list.is_empty() {
+                    return Ok(Value::String(s))
+                }
+                if list[0].len() + 4 == s.len() {
+                    if let Some(s) = Self::get_value_from_ctx(list[0].as_str(),ctx) {
+                        return Ok(s)
+                    }
+                    return anyhow::anyhow!("not found var[{}]",list[0]).err()
+                }
+                for i in list {
+                    let val = if let Some(val) = Self::get_value_from_ctx(i.as_str(),ctx) {
+                      val
+                    }else{
+                        return anyhow::anyhow!("not found var[{}]",i).err()
+                    };
+                    s = s.replace(format!("{{{{{i}}}}}").as_str(),val.as_str().unwrap_or(""));
+                }
+                Ok(Value::String(s))
+            }
+            Value::Array(list) => {
+                let mut vec = vec![];
+                for i in list {
+                    let val = Self::bound_value(i, ctx)?;
+                    vec.push(val);
+                }
+                Ok(Value::Array(vec))
+            }
+            Value::Object(obj) => {
+                let mut map = Map::new();
+                for (k,v) in obj {
+                    let val = Self::bound_value(v, ctx)?;
+                    map.insert(k,val);
+                }
+                Ok(Value::Object(map))
+            }
+            _=>{
+                Ok(value)
             }
         }
-        Ok(data)
     }
-
-    pub fn init_var_from_ctx(&mut self,ctx:&Context){
-        let pos = self.input.iter().map(|x|x.from_position.as_str()).collect::<Vec<&str>>();
-        let mut vals = vec![];
-        for i in pos{
-            if i.is_empty() {
-                vals.push(Value::Null);
-                continue
-            }
-            let mut ks = i.split(".").collect::<VecDeque<&str>>();
-            let node_code = ks.pop_front().unwrap();
-            let res = ctx.get_opt(node_code, |x:Option<&mut Value>|{
-                if x.is_none() {
-                    return None;
-                }
-                let x = x.unwrap();
-                if let Some(s) = Self::find_value(ks,x) {
-                    Some(s.clone())
+    fn string_type(s: &str) ->Vec<&str> {
+        let list = s.regex(r"\{\{(.*?)\}\}").unwrap_or(vec![]);
+        list
+    }
+    fn get_value_from_ctx(pos:&str,ctx:&Context) ->Option<Value> {
+        let mut ks = pos.split(".").collect::<VecDeque<&str>>();
+        let code = ks.pop_front()?;
+        let res = ctx.get_opt(code,|x:Option<&mut Value>|{
+            let mut x = x?;
+            loop {
+                if let Some(key) = ks.pop_front() {
+                    match x {
+                        Value::Array(ref mut list) => {
+                            if let Ok(index) = usize::from_str(key) {
+                                if let Some(val) = list.get_mut(index) {
+                                    x = val;
+                                    continue
+                                }
+                            }
+                        }
+                        Value::Object(ref mut obj) => {
+                            if let Some(val) = obj.get_mut(key) {
+                                x = val;
+                                continue
+                            }
+                        }
+                        _=>{
+                            return None
+                        }
+                    }
+                    return None
                 }else{
-                    None
+                    return Some(x.clone());
                 }
-            });
-            if let Some(s) = res{
-                vals.push(s);
-            }else{
-                vals.push(Value::Null);
             }
-        }
-        for (i,v) in self.input.iter_mut().zip(vals) {
-            if v.is_null() && i.default.is_some() {
-                continue
-            }
-            i.default = Some(v);
-        }
-    }
-
-    fn find_value<'a>(mut key:VecDeque<&str>,val:&'a Value)->Option<&'a Value>{
-        if key.is_empty() {
-            return Some(val)
-        }
-        if let Value::Object(ref obj) = val{
-            if let Some(val) = obj.get(key.pop_front().unwrap()) {
-                return Self::find_value(key,val)
-            }
-        }
-        None
+        });
+        return res
     }
 }
 
-#[macro_export]
-macro_rules! var_auto_inject {
-    ($cfg:tt.$field:tt) => {
-impl VarFill for $cfg{
-    fn file_item(&mut self, var_name: String, value: Value) -> anyhow::Result<()> {
-        if self.$field.is_empty() {
-            return Ok(())
-        }
-        let var = format!("{{{{{var_name}}}");
-        let val = match value {
-            Value::Null => "".to_string(),
-            Value::Bool(b) => b.to_string(),
-            Value::Number(n) => {
-                if let Some(s) = n.as_u64() {
-                    s.to_string()
-                }else if let Some(s) = n.as_i64(){
-                    s.to_string()
-                }else if let Some(s) = n.as_f64() {
-                    format!("{:.2}",s)
-                }else{
-                    unimplemented!()
-                }
-            }
-            Value::String(s) => s,
-            n @ _ => {
-                return Err(anyhow::anyhow!("VarFill no support type:{:?}",n))
-            }
-        };
-        self.$field = self.$field.replace(var.as_str(), val.as_str());
-        Ok(())
+#[cfg(test)]
+mod test{
+    use serde::{Deserialize, Serialize};
+    use agent_rt::PlanBuilder;
+    use crate::rt_node_service::CfgBound;
+
+    #[derive(Debug, Default, Clone, Deserialize, Serialize)]
+    pub struct TestConfig{
+        #[serde(default)]
+        pub prompt:String,
+
+        pub nb:f32,
+        pub open:bool,
+        pub query:String,
+        pub list:Vec<isize>
     }
-}
-    };
+
+    #[test]
+    fn test_cfg_bound(){
+        let json1 = serde_json::json!({
+           "hello":"world",
+            "number":1,
+            "list":[2,3,4],
+            "map":{
+                "a":true
+            }
+        });
+        let json2 = serde_json::json!({
+           "key":"this is a key",
+            "float":2.1
+        });
+
+        let rt = agent_rt::Runtime::default().launch();
+        let ctx = rt.ctx("test01",PlanBuilder::single_node("1","").build());
+        ctx.set("j1",json1);
+        ctx.set("j2",json2);
+
+        let cb:CfgBound<TestConfig> = serde_json::from_str(r#"{
+        "prompt":"j1.hello:{{j1.hello}}",
+        "nb":"{{j2.float}}",
+        "open":"{{j1.map.a}}",
+        "query":"{{j2.key}}",
+        "list":"{{j1.list}}"
+        }"#).unwrap();
+
+        let tc = cb.bound(&ctx).unwrap();
+        println!("{tc:?}");
+
+        assert_eq!("j1.hello:world",tc.prompt.as_str());
+        assert_eq!(2.1f32,tc.nb);
+        assert_eq!(true,tc.open);
+        assert_eq!("this is a key",tc.query);
+        assert_eq!(3,tc.list.len());
+
+    }
 }

@@ -4,9 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::sync::Arc;
 use crate::rt_node_service::in_out_bonding::CfgBound;
-use crate::var_auto_inject;
-use serde_json::Value;
-use crate::rt_node_service::VarFill;
 
 #[async_trait::async_trait]
 pub trait ToolEvent: Send {
@@ -43,7 +40,7 @@ pub struct LLMToolCallRequest {
     #[serde(default="String::default")]
     pub args:String,
 }
-var_auto_inject!(LLMToolCallRequest.args);
+
 impl LLMToolCallRequest {
     pub fn as_json(&self) -> String {
         serde_json::to_string(self).unwrap()
@@ -68,7 +65,7 @@ impl ServiceLayer for ToolService {
         ctx: Arc<Context>,
         cfg: Self::Config,
     ) -> anyhow::Result<Self::Output> {
-        let cfg = cfg.init(&ctx)?;
+        let cfg = cfg.bound(&ctx)?;
 
         let LLMToolCallRequest {
             call_id,

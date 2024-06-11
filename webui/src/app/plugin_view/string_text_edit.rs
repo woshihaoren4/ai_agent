@@ -77,6 +77,22 @@ impl InputStrViewTextEdit {
                     });
                 }
             }
+            "enum" => {
+                ui.horizontal(|ui|{
+                    ui.label(format!("{name}:"));
+                    if let Value::String(ref mut s) = field.value {
+                        egui::ComboBox::from_label("select a value")
+                            .selected_text(s.as_str())
+                            .show_ui(ui,|ui|{
+                                if let Some(ref es) = field.ui_extend_enum {
+                                    for i in es.iter(){
+                                        ui.selectable_value(s,i.to_string(),i);
+                                    }
+                                }
+                            });
+                    }
+                });
+            }
             _ => {
                 ui.label(egui::WidgetText::RichText(RichText::new(format!("Field[{name}] ui_type[{}] not support",field.r#type))));
             }

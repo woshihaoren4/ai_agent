@@ -7,15 +7,22 @@
             "ui_type":"window",
             "service_type":"openai-llm",
             "input_vars": {
-                "version":{
+                "version": {
                     "type":"string",
-                    "default":"gpt-32k"
+                    "default":"gpt-3.5-turbo",
+                    "ui_type": "enum",
+                    "ui_extend_enum": [
+                        "gpt-4o",
+                        "gpt-4-turbo",
+                        "gpt-4",
+                        "gpt-3.5-turbo"
+                    ]
                 },
                 "temperature":{
                     "type":"f32",
                     "default": 0.7,
                     "desc":"The randomness of the model generated responses",
-                    "ui_slider": {
+                    "ui_extend_slider": {
                         "max": 2.0,
                         "min": 0.0,
                         "speed": 0.01

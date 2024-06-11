@@ -1,0 +1,25 @@
+{
+  "plugin_list": [
+    {
+      "code":"start",
+      "class":"FlowChart",
+      "desc":"Entry to all task flows",
+      "ui_type":"window",
+      "service_type":"var",
+      "input_vars": {
+      },
+      "output_vars": "null"
+    },
+    {
+      "code":"end",
+      "class":"FlowChart",
+      "desc":"Exit for all task flows",
+      "ui_type":"window",
+      "service_type":"var",
+      "input_vars": {
+
+      },
+      "output_vars": "null"
+    }
+  ]
+}
