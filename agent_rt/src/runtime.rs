@@ -91,16 +91,18 @@ impl Runtime {
         //todo 任务统计
         Ok(())
     }
-    pub fn spawn(&self, ctx: Arc<Context>) -> anyhow::Result<()> {
+    pub fn spawn<V: Any + Send + Sync>(&self, ctx: Arc<Context>, args:V) -> anyhow::Result<()> {
         self.check(&ctx)?;
+        ctx.set(START_NODE_CODE,args);
         //修改ctx状态
         ctx.set_status(CtxStatus::RUNNING);
         //执行
         Runtime::exec_next_node(ctx, START_NODE_CODE);
         Ok(())
     }
-    pub async fn block_on<Out: Any>(&self, ctx: Arc<Context>) -> anyhow::Result<Out> {
+    pub async fn block_on<Out: Any,V: Any + Send + Sync>(&self, ctx: Arc<Context>, args:V) -> anyhow::Result<Out> {
         self.check(&ctx)?;
+        ctx.set(START_NODE_CODE,args);
         let rt_wait = RuntimeWait::<Out> {
             ctx,
             _out: Default::default(),

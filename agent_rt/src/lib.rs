@@ -48,7 +48,7 @@ mod tests {
         ctx.set_max_stack(2);
         let ctx = ctx.arc();
 
-        let res = rt.block_on::<String>(ctx).await;
+        let res = rt.block_on::<String,_>(ctx,()).await;
         println!("{:?}", res);
         assert_eq!(true, res.is_err());
     }
@@ -67,7 +67,7 @@ mod tests {
             .unwrap();
 
         let ctx = rt.ctx("test001", plan).arc();
-        let res = rt.block_on::<String>(ctx).await.unwrap();
+        let res = rt.block_on::<String,_>(ctx,()).await.unwrap();
         println!("{:?}", res);
         assert_eq!("success", res.as_str());
     }
@@ -115,7 +115,7 @@ mod tests {
                 println!("over callback");
             })
             .arc();
-        let res = rt.block_on::<String>(ctx).await.unwrap();
+        let res = rt.block_on::<String,_>(ctx,()).await.unwrap();
         println!("{}", res);
         assert_eq!("success", res.as_str());
     }
@@ -148,7 +148,7 @@ mod tests {
                     .end(Vec::<String>::new(), (END_NODE_CODE, "node2", "n1"))
                     .check_and_build()?;
 
-                let res = f.ctx.sub_ctx(code, plan).arc().block_on::<String>().await?;
+                let res = f.ctx.sub_ctx(code, plan).arc().block_on::<String,_>(()).await?;
                 wd_log::log_info_ln!("子任务执行完成");
                 Ok(Output::new(res).raw_to_ctx())
             })
@@ -168,7 +168,7 @@ mod tests {
         let out = rt
             .ctx("test_runtime_sub_task", plan)
             .arc()
-            .block_on::<String>()
+            .block_on::<String,_>(())
             .await
             .unwrap();
         println!("--->{}", out);
@@ -190,7 +190,7 @@ mod tests {
             .unwrap();
 
         let ctx = rt.ctx("test001", plan).arc();
-        let res = rt.block_on::<String>(ctx).await;
+        let res = rt.block_on::<String,_>(ctx,()).await;
         println!("{:?}", res);
         assert_eq!(true, res.is_err());
     }

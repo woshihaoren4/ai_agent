@@ -239,11 +239,11 @@ impl Context {
         };
     }
 
-    pub fn spawn(self: Arc<Self>) -> anyhow::Result<()> {
-        self.runtime.clone().spawn(self)
+    pub fn spawn<V: Any + Send + Sync>(self: Arc<Self>,args:V) -> anyhow::Result<()> {
+        self.runtime.clone().spawn(self,args)
     }
-    pub async fn block_on<Out: Any>(self: Arc<Self>) -> anyhow::Result<Out> {
-        self.runtime.clone().block_on(self).await
+    pub async fn block_on<Out: Any,V: Any + Send + Sync>(self: Arc<Self>, args:V) -> anyhow::Result<Out> {
+        self.runtime.clone().block_on(self,args).await
     }
 
     pub fn set_status(&self, status: CtxStatus) {

@@ -275,7 +275,7 @@ mod test {
                 )
                 // .updates(OpenaiLLM::set_channel_to_ctx)
                 .arc()
-                .block_on::<Value>()
+                .block_on::<Value,_>(())
                 .await
                 .unwrap();
             let resp = serde_json::from_value::<LLMNodeResponse>(resp).unwrap();
@@ -310,7 +310,7 @@ mod test {
                 )
                 .updates(OpenaiLLMService::set_channel_to_ctx)
                 .arc();
-            ctx.clone().spawn().unwrap();
+            ctx.clone().spawn(()).unwrap();
 
             loop {
                 let status = ctx.status();

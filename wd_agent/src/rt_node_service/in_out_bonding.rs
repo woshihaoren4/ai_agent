@@ -17,9 +17,12 @@ pub struct CfgBound<T>{
 impl<T> CfgBound<T>
     where T:for<'a> serde::Deserialize<'a>
 {
+    pub fn raw_bound_value(self,ctx:&Context)->anyhow::Result<Value>{
+        Self::bound_value(self.inner, ctx)
+    }
     pub fn bound(self,ctx:&Context)->anyhow::Result<T>
     {
-        let value = Self::bound_value(self.inner, ctx)?;
+        let value = self.raw_bound_value(ctx)?;
         let t:T = serde_json::from_value(value)?;Ok(t)
     }
     fn bound_value(value:Value,ctx:&Context)->anyhow::Result<Value>{

@@ -126,7 +126,7 @@ mod test {
             )
             // .updates(OpenaiLLMService::set_channel_to_ctx)
             .arc();
-        let llm_resp = ctx.clone().block_on::<Value>().await.unwrap();
+        let llm_resp = ctx.clone().block_on::<Value,_>(()).await.unwrap();
         let resp: LLMNodeResponse = serde_json::from_value(llm_resp).unwrap();
         for i in resp.tools.unwrap() {
             let tool_resp = rt
@@ -137,7 +137,7 @@ mod test {
                         .unwrap(),
                 )
                 .arc()
-                .block_on::<Value>()
+                .block_on::<Value,_>(())
                 .await
                 .unwrap();
             println!("tool resp --->{}", tool_resp.to_string());

@@ -5,7 +5,7 @@
       "class":"FlowChart",
       "desc":"Entry to all task flows",
       "ui_type":"window",
-      "service_type":"var",
+      "service_type":"flow_chart_var",
       "input_vars": {
       },
       "output_vars": "null"

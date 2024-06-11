@@ -211,7 +211,7 @@ mod test {
         let res = rt
             .ctx("test001", plan)
             .arc()
-            .block_on::<Value>()
+            .block_on::<Value,_>(())
             .await
             .unwrap();
         println!("{:?}", res.to_string());
@@ -223,7 +223,7 @@ mod test {
         let res = rt
             .ctx("test001", plan)
             .arc()
-            .block_on::<Value>()
+            .block_on::<Value,_>(())
             .await
             .unwrap();
         println!("{:?}", res.to_string());
@@ -235,7 +235,7 @@ mod test {
         let res = rt
             .ctx("test001", plan)
             .arc()
-            .block_on::<Value>()
+            .block_on::<Value,_>(())
             .await
             .unwrap();
         println!("{:?}", res.to_string());
