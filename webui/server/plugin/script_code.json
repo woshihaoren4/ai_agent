@@ -2,7 +2,7 @@
     "plugin_list":[
         {
             "code":"python",
-            "class":"script",
+            "class":"Script",
             "desc":"a python service",
             "ui_type":"window",
             "service_type":"python",
