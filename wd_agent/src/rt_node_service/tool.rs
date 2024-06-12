@@ -1,9 +1,9 @@
 use crate::plugin_tools::PluginControlSchedule;
+use crate::rt_node_service::in_out_bonding::CfgBound;
 use agent_rt::{Context, ServiceLayer};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::rt_node_service::in_out_bonding::CfgBound;
 
 #[async_trait::async_trait]
 pub trait ToolEvent: Send {
@@ -37,8 +37,8 @@ impl Default for ToolService {
 pub struct LLMToolCallRequest {
     pub call_id: Option<String>,
     pub name: String,
-    #[serde(default="String::default")]
-    pub args:String,
+    #[serde(default = "String::default")]
+    pub args: String,
 }
 
 impl LLMToolCallRequest {
@@ -74,10 +74,7 @@ impl ServiceLayer for ToolService {
         } = cfg;
         wd_log::log_debug_ln!("code[{}] exec tool[{}] args:{:?}", code, name, args);
 
-        let content = self
-            .loader
-            .call(name.as_str(), args)
-            .await?;
+        let content = self.loader.call(name.as_str(), args).await?;
 
         let resp = LLMToolCallResponse { call_id, content };
         wd_log::log_debug_ln!("code[{}] exec tool[{}] result[{:?}]", code, name, resp);
@@ -126,7 +123,7 @@ mod test {
             )
             // .updates(OpenaiLLMService::set_channel_to_ctx)
             .arc();
-        let llm_resp = ctx.clone().block_on::<Value,_>(()).await.unwrap();
+        let llm_resp = ctx.clone().block_on::<Value, _>(()).await.unwrap();
         let resp: LLMNodeResponse = serde_json::from_value(llm_resp).unwrap();
         for i in resp.tools.unwrap() {
             let tool_resp = rt
@@ -137,7 +134,7 @@ mod test {
                         .unwrap(),
                 )
                 .arc()
-                .block_on::<Value,_>(())
+                .block_on::<Value, _>(())
                 .await
                 .unwrap();
             println!("tool resp --->{}", tool_resp.to_string());

@@ -94,7 +94,8 @@ impl Server {
             if let Some(code) = script_code {
                 PyScriptEntity::new(code, module_name)
             } else {
-                return anyhow::anyhow!("if src is [SRC_TYPE_SCRIPT] script_code can not nil").err();
+                return anyhow::anyhow!("if src is [SRC_TYPE_SCRIPT] script_code can not nil")
+                    .err();
             }
         } else if *src == 1 {
             PyScriptEntity::from_module(module_name)

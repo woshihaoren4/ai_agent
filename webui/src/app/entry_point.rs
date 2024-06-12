@@ -1,19 +1,19 @@
-use std::time::Duration;
-use crate::app::{sys_setting};
 use crate::app::main_frame::AppEntity;
 use crate::app::state::State;
+use crate::app::sys_setting;
+use std::time::Duration;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct AiAgentApp {
-    state:State,
+    state: State,
 }
 
 impl Default for AiAgentApp {
     fn default() -> Self {
         let state = State::default();
-        Self {state}
+        Self { state }
     }
 }
 
@@ -27,9 +27,9 @@ impl AiAgentApp {
                     state.debug_win.info("not found app from localstorage");
                     state
                 }
-                Some(s) => {s}
+                Some(s) => s,
             };
-            return AiAgentApp{state}
+            return AiAgentApp { state };
         }
         let mut app = AiAgentApp::default();
         app.state.debug_win.info("create a default app");
@@ -39,8 +39,7 @@ impl AiAgentApp {
 
 impl eframe::App for AiAgentApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        AppEntity::default()
-            .update(ctx,frame,&mut self.state)
+        AppEntity::default().update(ctx, frame, &mut self.state)
     }
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, &self.state);
@@ -49,10 +48,9 @@ impl eframe::App for AiAgentApp {
     fn auto_save_interval(&self) -> Duration {
         if self.state.project_cfg.auto_save_interval <= 0 {
             Duration::from_secs(5)
-        }else{
+        } else {
             Duration::from_secs(self.state.project_cfg.auto_save_interval as u64)
         }
-
     }
 
     fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
@@ -65,5 +63,3 @@ impl eframe::App for AiAgentApp {
         color.to_normalized_gamma_f32()
     }
 }
-
-

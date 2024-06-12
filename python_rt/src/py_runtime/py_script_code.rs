@@ -10,9 +10,9 @@ pub enum ScriptSrc {
     ModuleName,
 }
 #[pyclass]
-pub struct FunctionInput{
+pub struct FunctionInput {
     #[pyo3(get, set)]
-    data:PyObject,
+    data: PyObject,
 }
 
 #[derive(Debug, Default)]
@@ -61,7 +61,7 @@ impl PyScriptEntity {
         self
     }
     pub fn eval_function(&self, function_name: &str, args: Value) -> PyResult<Value> {
-        wd_log::log_debug_ln!("eval_function -> {:?} args:{:?}" , self,args);
+        wd_log::log_debug_ln!("eval_function -> {:?} args:{:?}", self, args);
         let Self {
             src,
             module_name,
@@ -89,7 +89,7 @@ impl PyScriptEntity {
             let function = module.getattr(function_name)?;
             //拼接输入
             let input_obj = Self::value_to_py_object(py, args)?;
-            let input_class = FunctionInput{data :input_obj};
+            let input_class = FunctionInput { data: input_obj };
             //调起函数
             let output_obj = function.call((input_class,), None)?.extract::<PyObject>()?;
             //输出转格式

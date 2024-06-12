@@ -1,21 +1,21 @@
+use crate::app::main_frame::MainView;
+use crate::app::state::State;
 use eframe::Frame;
 use egui::Context;
-use crate::app::main_frame::MainView;
-use crate::app::state::{ State};
 
 #[derive(Debug)]
-pub struct FrameSetting<'a>{
-    name:&'a str,
+pub struct FrameSetting<'a> {
+    name: &'a str,
 }
-impl Default for FrameSetting<'_>{
+impl Default for FrameSetting<'_> {
     fn default() -> Self {
         let name = "setting";
-        Self{name}
+        Self { name }
     }
 }
 
-impl MainView for FrameSetting<'_>{
-    fn name(&self) -> & str {
+impl MainView for FrameSetting<'_> {
+    fn name(&self) -> &str {
         self.name
     }
 
@@ -23,10 +23,8 @@ impl MainView for FrameSetting<'_>{
         let open = cfg.layout_config.selected_anchor == self.name;
         egui::SidePanel::left("setting")
             // .resizable(false)
-            .show_animated(ctx,open,|ui|{
-                ui.vertical_centered(|ui|{
-                    ui.heading("⚙ setting")
-                });
+            .show_animated(ctx, open, |ui| {
+                ui.vertical_centered(|ui| ui.heading("⚙ setting"));
                 ui.separator();
                 ctx.settings_ui(ui);
                 ui.separator();

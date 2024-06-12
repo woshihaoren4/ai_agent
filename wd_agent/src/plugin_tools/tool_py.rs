@@ -1,35 +1,34 @@
+use crate::plugin_tools::{Oauth, Tool};
+use python_rt::client::Client;
+use python_rt::proto::proto::CallFunctionRequest;
 use std::str::FromStr;
 use wd_tools::PFErr;
-use python_rt::client::Client;
-use python_rt::proto::proto::{CallFunctionRequest};
-use crate::plugin_tools::{Oauth, Tool};
 
-
-pub static mut CLIENT:Option<Client> = None;
+pub static mut CLIENT: Option<Client> = None;
 #[allow(dead_code)]
-pub async fn init_py_rt_client(url:&str){
+pub async fn init_py_rt_client(url: &str) {
     unsafe {
         let client = Client::new(url).await.expect("init_py_rt_client failed");
         CLIENT = Some(client)
     }
 }
 #[allow(dead_code)]
-pub fn get_py_rt_client()->Client{
+pub fn get_py_rt_client() -> Client {
     unsafe {
-        if let Some(ref s) = CLIENT{
+        if let Some(ref s) = CLIENT {
             s.clone()
-        }else {
+        } else {
             panic!("CLIENT not init")
         }
     }
 }
 
 #[derive(Clone)]
-pub struct ToolPython{
-    pub req:CallFunctionRequest
+pub struct ToolPython {
+    pub req: CallFunctionRequest,
 }
 
-impl From<ToolPython> for Tool{
+impl From<ToolPython> for Tool {
     fn from(value: ToolPython) -> Self {
         Tool::Python(value)
     }
@@ -40,15 +39,14 @@ macro_rules! py {
     ($code:tt) => {
         ToolPython::new_script_code($code)
     };
-    ($sys_path:tt,$module:tt)=>{
-        ToolPython::from_module($sys_path,$module)
+    ($sys_path:tt,$module:tt) => {
+        ToolPython::from_module($sys_path, $module)
     };
 }
 
-
-impl ToolPython{
-    pub fn new_script_code<S:Into<String>>(code:S)->Self{
-        let req = CallFunctionRequest{
+impl ToolPython {
+    pub fn new_script_code<S: Into<String>>(code: S) -> Self {
+        let req = CallFunctionRequest {
             src: 0,
             script_code: Some(code.into()),
             module_name: "default_module".to_string(),
@@ -58,11 +56,11 @@ impl ToolPython{
             function_input: None,
         };
 
-        Self{req }
+        Self { req }
     }
     #[allow(dead_code)]
-    pub fn from_module<S:Into<String>,M:Into<String>>(sys_path:S,module_name:M)->Self{
-        let req = CallFunctionRequest{
+    pub fn from_module<S: Into<String>, M: Into<String>>(sys_path: S, module_name: M) -> Self {
+        let req = CallFunctionRequest {
             src: 1,
             script_code: None,
             module_name: module_name.into(),
@@ -72,12 +70,13 @@ impl ToolPython{
             function_input: None,
         };
 
-        Self{req }
+        Self { req }
     }
 
     pub async fn call(
         mut self,
-        function_name:&str, mut args:String,
+        function_name: &str,
+        mut args: String,
         _auth: Option<Oauth>,
     ) -> anyhow::Result<String> {
         if args.is_empty() {
@@ -90,13 +89,13 @@ impl ToolPython{
         let client = get_py_rt_client();
         let resp = client.call_function(self.req).await?;
         if resp.code != 0 {
-            return anyhow::anyhow!("exec python error:{}",resp.msg).err()
+            return anyhow::anyhow!("exec python error:{}", resp.msg).err();
         }
-        if let Some(s) = resp.output{
+        if let Some(s) = resp.output {
             let value = python_rt::common::prost_struct_to_serde_value(s);
             let out = serde_json::to_string(&value)?;
             Ok(out)
-        }else{
+        } else {
             Ok(resp.msg)
         }
     }

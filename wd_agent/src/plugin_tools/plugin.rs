@@ -21,10 +21,10 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub fn is_py(&self)->bool{
-        if let Tool::Python(_) = self{
+    pub fn is_py(&self) -> bool {
+        if let Tool::Python(_) = self {
             true
-        }else{
+        } else {
             false
         }
     }
@@ -35,7 +35,11 @@ impl Debug for Tool {
         match self {
             Tool::Http(h) => h.fmt(f),
             Tool::Python(r) => {
-                write!(f, "[Tool.Python] this tool is python script --->{:?}<---",r.req.script_code)
+                write!(
+                    f,
+                    "[Tool.Python] this tool is python script --->{:?}<---",
+                    r.req.script_code
+                )
             }
             Tool::Custom(_) => {
                 write!(f, "[Tool.Custom] this tool is function")
@@ -84,13 +88,13 @@ impl Plugin {
                 if let Some(s) = self.tools.remove("") {
                     if s.is_py() {
                         s
-                    }else{
-                        return anyhow::anyhow!("plugin_view:api[{}] not found", tool_name).err()
+                    } else {
+                        return anyhow::anyhow!("plugin_view:api[{}] not found", tool_name).err();
                     }
-                }else{
-                    return anyhow::anyhow!("plugin_view:api[{}] not found", tool_name).err()
+                } else {
+                    return anyhow::anyhow!("plugin_view:api[{}] not found", tool_name).err();
                 }
-            },
+            }
         };
         match tool {
             Tool::Http(htp) => {
@@ -102,9 +106,7 @@ impl Plugin {
                 };
                 htp.call(host, port, args, self.auth).await
             }
-            Tool::Python(py) => {
-                py.call(tool_name,args,self.auth).await
-            }
+            Tool::Python(py) => py.call(tool_name, args, self.auth).await,
             Tool::Custom(function) => function.call(args).await,
         }
     }

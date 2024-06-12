@@ -1,6 +1,6 @@
 pub struct Common;
 
-impl Common{
+impl Common {
     #[allow(dead_code)]
     pub(crate) fn rust_view_ui(ui: &mut egui::Ui, code: &str) {
         let language = "rs";
