@@ -39,7 +39,7 @@ impl MainView for Project {
                         match cfg
                             .plugin
                             .tools_loader
-                            .try_get_value::<BTreeMap<String, Vec<PluginService>>>()
+                            .try_get_json::<BTreeMap<String, Vec<PluginService>>>()
                         {
                             None => {}
                             Some(Ok(o)) => {

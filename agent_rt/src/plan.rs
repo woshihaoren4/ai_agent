@@ -10,6 +10,14 @@ pub struct Node {
     pub node_type_id: String, //类型节点id
     pub node_config: String,  //类型节点配置
 }
+impl Node{
+    pub fn new<C:Into<String>,T:Into<String>,F:Into<String>>(code:C,ty:T,cfg:F)->Self{
+        let code = code.into();
+        let node_type_id = ty.into();
+        let node_config = cfg.into();
+        Self{code,node_type_id,node_config}
+    }
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct PlanNode {
@@ -26,6 +34,20 @@ pub struct LockPlan {
 #[derive(Debug, Clone)]
 pub struct PlanBuilder {
     map: HashMap<String, PlanNode>,
+}
+// ready,code,type_id,cfg,go
+impl<T> From<T> for PlanBuilder
+where T:IntoIterator<Item = (Vec<String>,Node,Vec<String>)>
+{
+    fn from(value: T) -> Self {
+        let mut map = HashMap::new();
+        for (ready,node,go) in value{
+            map.insert(node.code.clone(),PlanNode{
+                ready,go,cfg:Some(node)
+            });
+        }
+        Self{map}
+    }
 }
 
 impl From<(Vec<String>, Node, Vec<String>)> for PlanNode {
@@ -265,7 +287,11 @@ impl Plan for LockPlan {
                 return NextNodeResult::Error(e.to_string());
             }
         };
-        let p = if let Some(p) = lock.get(node_code) {
+        let p = if let Some(p) = lock.get_mut(node_code) {
+            if p.ready.is_empty() && p.cfg.is_some() {
+                let node = std::mem::take(&mut p.cfg).unwrap();
+                return NextNodeResult::Nodes(vec![node])
+            }
             p.go.clone()
         } else {
             return NextNodeResult::Error(format!("node[{}] not found", node_code));

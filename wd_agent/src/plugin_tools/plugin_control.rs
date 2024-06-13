@@ -40,6 +40,7 @@ pub struct PluginControlSchedule {
 }
 
 impl PluginControlSchedule {
+    #[allow(dead_code)]
     pub fn try_register_plugin<S: Into<String>, T: Into<PluginResult>>(
         mut self,
         plugin_name: S,
@@ -52,6 +53,7 @@ impl PluginControlSchedule {
         self.map.insert(plugin_name.into(), plugin);
         self.ok()
     }
+    #[allow(dead_code)]
     pub fn register_plugin<S: Into<String>, T: Into<Plugin>>(
         mut self,
         plugin_name: S,

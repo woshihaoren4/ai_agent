@@ -1,8 +1,11 @@
+use std::collections::BTreeMap;
 use crate::app::main_frame::MainView;
 use crate::app::plugin_view::TopControlTools;
-use crate::app::state::State;
+use crate::app::state::{PluginService, State};
 use eframe::Frame;
 use egui::{Context, Widget};
+use serde_json::json;
+use crate::infra;
 
 #[derive(Debug, Default)]
 pub struct ControlTools {}
@@ -60,6 +63,39 @@ impl MainView for ControlTools {
                     {
                         eframe::set_value(frame.storage_mut().unwrap(), eframe::APP_KEY, cfg);
                         cfg.debug_win.info("save success")
+                    }
+                    if egui::Button::new("debug")
+                        .fill(egui::Color32::GREEN)
+                        .ui(ui)
+                        .clicked()
+                    {
+                        let body = json!({});
+                        let result = infra::post_json_stream(format!("{}/api/v1/agent/call", cfg.project_cfg.server_addr).as_str(), &body, |x| x);
+                        match result {
+                            Ok(o) => {
+                                cfg.plugin.debug_loader = o;
+                            }
+                            Err(e) => {
+                                cfg.debug_win.error(format!("debug error:{:?}",e) .as_str());
+                            }
+                        }
+                    }
+                    match cfg
+                        .plugin
+                        .debug_loader
+                        .try_get_string()
+                    {
+                        None => {}
+                        Some(Ok(o)) => {
+                            cfg.debug_win.info(o.as_str());
+                        }
+                        Some(Err(e)) => {
+                            cfg.debug_win
+                                .info(format!("load plugin_view error:{e}").as_str());
+                        }
+                    }
+                    if !cfg.plugin.debug_loader.is_over() {
+                        ctx.request_repaint();
                     }
                 });
             });

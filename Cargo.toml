@@ -1,5 +1,5 @@
 [workspace]
-members = ["wd_agent", "agent_rt", "python_rt", "webui"]
+members = ["wd_agent", "agent_rt", "python_rt", "webui", "example"]
 resolver = "2"
 
 [workspace.package]

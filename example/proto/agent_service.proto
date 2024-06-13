@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "./proto";
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+
+service AgentService{
+    rpc Call(AgentServiceCallRequest)returns (stream AgentServiceCallResponse){
+        option (google.api.http) = {
+            post: "/api/v1/agent/{task_code}"
+            body: "*"
+        };
+    };
+}
+enum CallMode {
+    //简单模型，只给最终结果
+    CALL_MODE_SIMPLE = 0;
+    //会给出每一步的执行结果
+    CALL_MODE_DEBUG = 1;
+}
+message AgentServiceCallRequest{
+    //任务编号，必须唯一
+    string task_code = 1;
+    //执行计划
+    repeated AgentServiceNode plan = 2;
+    //入参，为空则从start节点上取值
+    optional google.protobuf.Struct input = 3;
+    //运行模式
+    CallMode mode = 4;
+}
+
+message AgentServiceNode{
+    // 节点编号
+    string code = 1;
+    // 节点类型
+    string service_type = 2;
+    // 节点配置
+    string cfg = 3;
+    //前置节点
+    repeated string ready_nodes = 4;
+    //后置节点
+    repeated string goto_nodes = 5;
+}
+
+message AgentServiceCallResponse{
+    // 0:成功 其他：识别
+    int32 code = 1;
+    string message = 2;
+    optional AgentServiceResult result = 3;
+}
+
+message AgentServiceResult {
+    //当前节点编码
+    string node_code = 3;
+    //轮次
+    int32 round = 4;
+    //结果
+    google.protobuf.Struct output = 5;
+}

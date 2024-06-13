@@ -22,7 +22,7 @@
   echo "mv src/lib.rs src/lib_back.rs"
   mv src/lib.rs src/lib_back.rs
   echo "mv src/main_back.rs src/main.rs"
-  mv src/main_back.rs src/main.rs
+  mv src/main_back.rs src/serve
   echo "cd ../"
   cd ../
   mv target ../target
@@ -57,7 +57,7 @@
   echo "mv src/lib_back.rs src/lib.rs"
   mv src/lib_back.rs src/lib.rs
   echo "mv src/main.rs src/main_back.rs"
-  mv src/main.rs src/main_back.rs
+  mv src/serve src/main_back.rs
 
 
 

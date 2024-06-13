@@ -7,7 +7,7 @@
             "ui_type":"window",
             "service_type":"openai-llm",
             "input_vars": {
-                "version": {
+                "model": {
                     "type":"string",
                     "default":"gpt-3.5-turbo",
                     "ui_type": "enum",
@@ -26,6 +26,16 @@
                         "max": 2.0,
                         "min": 0.0,
                         "speed": 0.01
+                    }
+                },
+                "max_tokens":{
+                    "type":"number",
+                    "default": 0.7,
+                    "desc":"answer max tokens",
+                    "ui_extend_slider": {
+                        "max": 512,
+                        "min": 0,
+                        "speed": 1
                     }
                 },
                 "prompt":{

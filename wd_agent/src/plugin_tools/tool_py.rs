@@ -45,6 +45,7 @@ macro_rules! py {
 }
 
 impl ToolPython {
+    #[allow(dead_code)]
     pub fn new_script_code<S: Into<String>>(code: S) -> Self {
         let req = CallFunctionRequest {
             src: 0,

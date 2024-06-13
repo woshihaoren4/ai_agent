@@ -1,0 +1,1 @@
+ protoc --go_out=infra/client/agent_rt_client/ --go-grpc_out=infra/client/agent_rt_client/ ../../example/proto/agent_service.proto  -I=../../example/proto

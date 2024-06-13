@@ -3,7 +3,7 @@ use agent_rt::Context;
 use serde_json::Value;
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug,Default)]
 pub struct VarFlowChartService {}
 
 #[async_trait::async_trait]

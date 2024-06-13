@@ -1,4 +1,4 @@
-use crate::infra::HttpJsonPromise;
+use crate::infra::{HttpResponsePromise, StreamResponse};
 use egui::emath::TSTransform;
 use egui::Pos2;
 use serde_json::Value;
@@ -103,7 +103,9 @@ pub struct Setting {
 #[derive(Default)]
 pub struct Plugin {
     #[serde(skip)]
-    pub tools_loader: HttpJsonPromise,
+    pub tools_loader: HttpResponsePromise,
+    #[serde(skip)]
+    pub debug_loader: StreamResponse,
     pub services: BTreeMap<String, Vec<PluginService>>,
     pub nodes: BTreeMap<String, PluginServiceWin>,
 }
