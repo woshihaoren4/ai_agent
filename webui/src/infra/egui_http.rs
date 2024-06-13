@@ -122,6 +122,37 @@ impl StreamResponse {
             None
         }
     }
+    pub fn try_get_obj<T>(&mut self) -> Option<anyhow::Result<T>>
+        where
+            T: for<'a> serde::Deserialize<'a>,
+    {
+        if self.status {
+            return None
+        }
+        let mut lock = self.stream.lock().unwrap();
+        if let Some(res) = lock.pop_front() {
+            if let Ok(ref s) = res {
+                if s == "->over<-"{
+                    self.status = true;
+                    return None
+                }
+                match serde_json::from_slice::<T>(s.as_bytes()) {
+                    Ok(o)=>{
+                        return Some(Ok(o))
+                    }
+                    Err(e)=>{
+                        return Some(Err(anyhow::anyhow!("{}",e.to_string())))
+                    }
+                }
+            }
+            if let Err(e)= res{
+                return Some(Err(anyhow::anyhow!("{}",e.to_string())))
+            }
+            None
+        }else{
+            None
+        }
+    }
 }
 
 pub fn post_json_stream<B:serde::Serialize>(url:&str,body:&B,func:impl FnOnce(ehttp::Request)->ehttp::Request)-> anyhow::Result<StreamResponse>

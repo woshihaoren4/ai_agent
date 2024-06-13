@@ -149,6 +149,9 @@ pub struct PluginServiceWin {
     pub goto: Vec<String>,
     #[serde(default)]
     pub goto_select: String,
+    #[serde(default)]
+    pub debug_output: Option<String>
+
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -172,6 +175,7 @@ pub struct PluginService {
     #[serde(default)]
     pub output_vars: Value,
 }
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 #[derive(Debug, Default, Clone)]

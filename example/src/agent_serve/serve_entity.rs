@@ -47,6 +47,7 @@ impl AgentServeEntity{
             }
             Err(e) => {
                 resp.code = 500;
+                println!("err ---> {:?}",e);
                 resp.message = e.to_string();
             }
         }
@@ -70,7 +71,17 @@ impl proto::agent_service_server::AgentService for AgentServeEntity{
         //
         let plan = agent_rt::PlanBuilder::from(nodes).build();
 
-        let ctx = self.rt.ctx(task_code,plan).arc();
+        let ctx = self.rt.ctx(task_code,plan).push_callback(|c|{
+            if c.status() != CtxStatus::SUCCESS {
+                let channel = c.get("debug_channel",|x:&mut Sender<Result<AgentServiceCallResponse,Status>>|x.clone());
+                if let Some(chan)=channel {
+                    let mut resp = AgentServiceCallResponse::default();
+                    resp.code = 500;
+                    resp.message = format!("{:?}",c.end_output::<String>());
+                    let _ = chan.try_send(Ok(resp));
+                }
+            }
+        }).arc();
         ctx.set("debug_channel",tx.clone());
         if let Err(e) = ctx.spawn(input){
             let mut resp = AgentServiceCallResponse::default();

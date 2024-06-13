@@ -46,6 +46,7 @@ impl TopControlTools {
                 service,
                 goto,
                 goto_select,
+                debug_output,
                 ..
             } = node;
             let mut update = false;
@@ -94,6 +95,12 @@ impl TopControlTools {
                     ui.collapsing("OUTPUT", |ui| {
                         Output::ui(ui, &mut service.output_vars);
                     });
+                    //渲染调试信息，如果有
+                    if let Some(s) = debug_output {
+                        ui.collapsing("DEBUG", |ui| {
+                            super::DebugView::ui(ui, s.as_str());
+                        });
+                    }
                 });
             //判断是否更新窗口名称
             if update {

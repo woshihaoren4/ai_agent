@@ -5,7 +5,7 @@
             "class":"LLM",
             "desc":"openai LLM chat",
             "ui_type":"window",
-            "service_type":"openai-llm",
+            "service_type":"openai_llm",
             "input_vars": {
                 "model": {
                     "type":"string",
@@ -30,7 +30,7 @@
                 },
                 "max_tokens":{
                     "type":"number",
-                    "default": 0.7,
+                    "default": 512,
                     "desc":"answer max tokens",
                     "ui_extend_slider": {
                         "max": 512,
