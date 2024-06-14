@@ -44,13 +44,15 @@ where
                     if let Some(s) = Self::get_value_from_ctx(list[0].as_str(), ctx) {
                         return Ok(s);
                     }
-                    return anyhow::anyhow!("not found var[{}]", list[0]).err();
+                    return Ok(Value::Null);
+                    // return anyhow::anyhow!("not found var[{}]", list[0]).err();
                 }
                 for i in list {
                     let val = if let Some(val) = Self::get_value_from_ctx(i.as_str(), ctx) {
                         val
                     } else {
-                        return anyhow::anyhow!("not found var[{}]", i).err();
+                        Value::Null
+                        // return anyhow::anyhow!("not found var[{}]", i).err();
                     };
                     s = s.replace(format!("{{{{{i}}}}}").as_str(), val.as_str().unwrap_or(""));
                 }

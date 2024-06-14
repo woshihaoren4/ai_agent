@@ -4,6 +4,7 @@ mod tool;
 mod in_out_bonding;
 mod var;
 mod python;
+mod selector;
 
 pub use in_out_bonding::*;
 pub use openai_llm::*;

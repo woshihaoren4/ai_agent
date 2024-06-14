@@ -39,6 +39,7 @@ pub enum NextNodeResult {
 pub trait Plan: Send + Sync {
     fn next(&self, ctx: Arc<Context>, node_id: &str) -> NextNodeResult;
     fn set(&self, nodes: Vec<PlanNode>);
+    fn update(&self,node_code:&str,update:Box<dyn FnOnce(Option<&mut PlanNode>)>);
 }
 
 #[derive(Debug)]

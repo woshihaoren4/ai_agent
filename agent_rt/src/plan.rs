@@ -21,9 +21,9 @@ impl Node{
 
 #[derive(Debug, Default, Clone)]
 pub struct PlanNode {
-    ready: Vec<String>,
-    go: Vec<String>,
-    cfg: Option<Node>,
+    pub ready: Vec<String>,
+    pub go: Vec<String>,
+    pub cfg: Option<Node>,
 }
 
 #[derive(Debug, Default)]
@@ -172,6 +172,13 @@ impl PlanBuilder {
         let go = go.into_iter().map(|x| x.into()).collect::<Vec<String>>();
         self.insert_node((node.into(), go))
     }
+    pub fn fission_from_code<S: Into<String>, N: Into<Node>>(&mut self,pos:&str, node: N, go: Vec<S>) -> &mut Self {
+        let node = node.into();
+        let p = self.map.get_mut(pos).unwrap();
+        p.go.push(node.code.clone());
+        let go = go.into_iter().map(|x| x.into()).collect::<Vec<String>>();
+        self.insert_node((node.into(), go))
+    }
     //在ready_codes中指定需要等待那些节点
     pub fn merged<R: Into<String>, S: Into<String>, N: Into<Node>>(
         &mut self,
@@ -297,7 +304,7 @@ impl Plan for LockPlan {
             }
         };
         let p = if let Some(p) = lock.get_mut(node_code) {
-            if p.ready.is_empty() && p.cfg.is_some() {
+            if p.ready.is_empty() && p.cfg.is_some() && node_code == START_NODE_CODE {
                 let node = std::mem::take(&mut p.cfg).unwrap();
                 return NextNodeResult::Nodes(vec![node])
             }
@@ -322,8 +329,8 @@ impl Plan for LockPlan {
                 }
             }
             if node.ready.is_empty() {
-                let node = std::mem::take(&mut node.cfg).unwrap();
-                list.push(node)
+                // let node = std::mem::take(&mut node.cfg).unwrap();
+                list.push(node.cfg.clone().unwrap())
             }
         }
         NextNodeResult::Nodes(list)
@@ -336,6 +343,12 @@ impl Plan for LockPlan {
                 lock.insert(cfg.code.clone(), i);
             }
         }
+    }
+
+    fn update(&self, node_code: &str, update: Box<dyn FnOnce(Option<&mut PlanNode>)>) {
+        let mut lock = self.map.lock().unwrap();
+        let val = lock.get_mut(node_code);
+        update(val);
     }
 }
 
