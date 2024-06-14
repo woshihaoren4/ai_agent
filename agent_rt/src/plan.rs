@@ -68,6 +68,15 @@ impl From<(Node, Vec<String>)> for PlanNode {
         }
     }
 }
+impl From<Vec<String>> for PlanNode {
+    fn from( go:  Vec<String>) -> Self {
+        Self {
+            ready: vec![],
+            go,
+            cfg:None,
+        }
+    }
+}
 impl From<(Node, String)> for PlanNode {
     fn from((cfg, go): (Node, String)) -> Self {
         Self {
@@ -102,7 +111,7 @@ impl PlanBuilder {
             .collect::<Vec<String>>();
 
         let first_node_code = node.code.clone();
-        let start = (Node::default(), vec![first_node_code.clone()]).into();
+        let start = vec![first_node_code.clone()].into();
         let plan = (node, go).into();
 
         map.insert(START_NODE_CODE.to_string(), start);

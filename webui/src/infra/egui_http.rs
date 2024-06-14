@@ -60,6 +60,7 @@ impl HttpResponsePromise {
         }
         None
     }
+    #[allow(dead_code)]
     pub fn try_get_string(&mut self) -> Option<anyhow::Result<String>>{
         let s = match self {
             HttpResponsePromise::None => return None,
@@ -79,7 +80,7 @@ impl HttpResponsePromise {
     }
 }
 
-
+#[allow(dead_code)]
 pub fn post_json<B:serde::Serialize>(url:&str,body:&B,func:impl FnOnce(ehttp::Request)->ehttp::Request)-> anyhow::Result<HttpResponsePromise>
 {
     let body = serde_json::to_vec(body)?;
@@ -102,26 +103,71 @@ pub struct StreamResponse{
 }
 
 impl StreamResponse {
-    pub fn is_over(&self)->bool {
+    pub fn is_waiting(&self)->bool {
         self.status
     }
+    pub fn stop(&mut self){
+        self.status = false
+    }
+    pub fn split_json(s:&String) -> (&str,Option<String>) {
+        if s.is_empty() {
+            return (s,None)
+        }
+        if !s.starts_with("{") {
+            return (s,None)
+        }
+        let mut index = 0;
+        let mut count = 0;
+        for i in s.chars() {
+            match i {
+                '{'=> count += 1,
+                '}'=> count -= 1,
+                _=>{}
+            }
+            if count != 0 {
+                index += i.len_utf8()
+            }else{
+                break
+            }
+        }
+        let (s1,s2) = s.split_at(index+1);
+        let s2 = if s2.is_empty() {
+            None
+        }else{
+            Some(s2.to_string())
+        };
+        (s1,s2)
+    }
     pub fn try_get_string(&mut self) -> Option<anyhow::Result<String>>{
-        if self.status {
+        if !self.status {
             return None
         }
         let mut lock = self.stream.lock().unwrap();
         if let Some(res) = lock.pop_front() {
-            if let Ok(ref s) = res {
-                if s == "->over<-"{
-                    self.status = true;
-                    return None
+            match res {
+                Ok(s) => {
+                    if s.as_str() == "->over<-"{
+                        self.status = false;
+                        return None
+                    }
+                    let (s1,s2) = Self::split_json(&s);
+                    if s2.is_none() {
+                        return Some(Ok(s))
+                    }
+                    if let Some(s) = s2 {
+                        lock.push_front(Ok(s));
+                    }
+                    return Some(Ok(s1.to_string()))
+                }
+                Err(e) => {
+                    return Some(Err(anyhow::anyhow!("{}",e)));
                 }
             }
-            Some(res)
         }else{
             None
         }
     }
+    #[allow(dead_code)]
     pub fn try_get_obj<T>(&mut self) -> Option<anyhow::Result<T>>
         where
             T: for<'a> serde::Deserialize<'a>,
@@ -133,7 +179,7 @@ impl StreamResponse {
         if let Some(res) = lock.pop_front() {
             if let Ok(ref s) = res {
                 if s == "->over<-"{
-                    self.status = true;
+                    self.status = false;
                     return None
                 }
                 match serde_json::from_slice::<T>(s.as_bytes()) {
@@ -161,7 +207,9 @@ pub fn post_json_stream<B:serde::Serialize>(url:&str,body:&B,func:impl FnOnce(eh
     let request = ehttp::Request::post(url, body);
     let req = func(request);
 
-    let recv = StreamResponse::default();
+    let mut recv = StreamResponse::default();
+    recv.status = true;
+
     let send = recv.stream.clone();
 
     ehttp::streaming::fetch (req, move |result| {

@@ -12,7 +12,7 @@ pub struct State {
     pub setting: Setting,
     pub project_cfg: ProjectConfig,
     pub plugin: Plugin,
-    pub work_plan: WorkPlan,
+    pub options_view: OptionsView,
     pub debug_win: DebugCfg,
 }
 
@@ -53,33 +53,34 @@ impl ProjectConfig {
 pub struct DebugCfg {
     pub level: String, // debug,info,warn,error,fatal
     pub log: String,
+    pub open: bool,
 }
 
 impl DebugCfg {
     #[allow(dead_code)]
-    pub fn debug(&mut self, log: &str) {
+    pub fn debug<S:Into<String>>(&mut self, log: S) {
         self.level = "debug".into();
-        self.log = log.to_string();
+        self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn info(&mut self, log: &str) {
+    pub fn info<S:Into<String>>(&mut self, log:S) {
         self.level = "info".into();
-        self.log = log.to_string();
+        self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn warn(&mut self, log: &str) {
+    pub fn warn<S:Into<String>>(&mut self, log:S) {
         self.level = "warn".into();
-        self.log = log.to_string();
+        self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn error(&mut self, log: &str) {
+    pub fn error<S:Into<String>>(&mut self, log:S) {
         self.level = "error".into();
-        self.log = log.to_string();
+        self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn fatal(&mut self, log: &str) {
+    pub fn fatal<S:Into<String>>(&mut self, log:S) {
         self.level = "fatal".into();
-        self.log = log.to_string();
+        self.log = log.into();
     }
 }
 
@@ -229,7 +230,9 @@ pub struct UISlider {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 #[derive(Debug, Default)]
-pub struct WorkPlan {
-    pub open: bool,
+pub struct OptionsView {
+    pub workflow_open: bool,
+    pub text_view_open: bool,
+    pub text_view_content: String,
     pub transform: TSTransform,
 }

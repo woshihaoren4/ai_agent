@@ -4,13 +4,16 @@ use crate::app::main_frame::project::Project;
 use crate::app::main_frame::setting::FrameSetting;
 use crate::app::main_frame::work_flow_view::WorkFlowView;
 use crate::app::state::State;
-use eframe::emath::Align;
+use crate::app::main_frame::debug::Debug;
 
 mod about;
 mod control_tools;
 mod project;
 mod setting;
 mod work_flow_view;
+mod debug;
+
+pub use debug::*;
 
 pub trait MainView {
     fn name(&self) -> &str;
@@ -21,11 +24,13 @@ pub struct AppEntity {
     items: Vec<Box<dyn MainView>>,
     tool_control: ControlTools,
     work_space: WorkFlowView,
+    debug : Debug,
 }
 impl Default for AppEntity {
     fn default() -> Self {
         let tool_control = ControlTools::default();
         let work_space = WorkFlowView::default();
+        let debug = Debug::default();
         let mut items: Vec<Box<dyn MainView>> = vec![];
         items.push(Box::new(Project::default()));
         items.push(Box::new(FrameSetting::default()));
@@ -36,6 +41,7 @@ impl Default for AppEntity {
             items,
             tool_control,
             work_space,
+            debug,
         }
     }
 }
@@ -69,11 +75,7 @@ impl AppEntity {
             });
         });
         //底部
-        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
-            ui.with_layout(egui::Layout::top_down(Align::Min), |ui| {
-                ui.label(format!("[{}] {}", cfg.debug_win.level, cfg.debug_win.log));
-            });
-        });
+        self.debug.update(ctx,frame,cfg);
         //绘制中部
         for i in self.items.iter_mut() {
             i.update(ctx, frame, cfg);

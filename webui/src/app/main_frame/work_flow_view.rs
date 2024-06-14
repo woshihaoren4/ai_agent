@@ -94,16 +94,16 @@ impl WorkFlowView {
         let response = ui.interact(rect, id, egui::Sense::click_and_drag());
         // Allow dragging the background as well.
         if response.dragged() {
-            cfg.work_plan.transform.translation += response.drag_delta();
+            cfg.options_view.transform.translation += response.drag_delta();
         }
 
         // Plot-like reset
         if response.double_clicked() {
-            cfg.work_plan.transform = TSTransform::default();
+            cfg.options_view.transform = TSTransform::default();
         }
 
         let transform = TSTransform::from_translation(ui.min_rect().left_top().to_vec2())
-            * cfg.work_plan.transform;
+            * cfg.options_view.transform;
 
         if let Some(pointer) = ui.ctx().input(|i| i.pointer.hover_pos()) {
             // Note: doesn't catch zooming / panning if a button in this PanZoom container is hovered.
@@ -113,14 +113,14 @@ impl WorkFlowView {
                 let pan_delta = ui.ctx().input(|i| i.smooth_scroll_delta);
 
                 // Zoom in on pointer:
-                cfg.work_plan.transform = cfg.work_plan.transform
+                cfg.options_view.transform = cfg.options_view.transform
                     * TSTransform::from_translation(pointer_in_layer.to_vec2())
                     * TSTransform::from_scaling(zoom_delta)
                     * TSTransform::from_translation(-pointer_in_layer.to_vec2());
 
                 // Pan:
-                cfg.work_plan.transform =
-                    TSTransform::from_translation(pan_delta) * cfg.work_plan.transform;
+                cfg.options_view.transform =
+                    TSTransform::from_translation(pan_delta) * cfg.options_view.transform;
             }
         }
 
@@ -188,13 +188,13 @@ impl MainView for WorkFlowView {
     }
 
     fn update(&mut self, ctx: &Context, _frame: &mut Frame, cfg: &mut State) {
-        let mut open = cfg.work_plan.open;
+        let mut open = cfg.options_view.workflow_open;
         egui::Window::new("WorkFlow-view")
             .default_width(500.0)
             .default_height(500.0)
             .vscroll(false)
             .open(&mut open)
             .show(ctx, |ui| self.ui(ui, cfg));
-        cfg.work_plan.open = open;
+        cfg.options_view.workflow_open = open;
     }
 }

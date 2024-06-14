@@ -48,7 +48,7 @@ impl MainView for Project {
                             }
                             Some(Err(e)) => {
                                 cfg.debug_win
-                                    .info(format!("load plugin_view error:{e}").as_str());
+                                    .info(format!("load plugin_view error:{e}"));
                             }
                         }
                         ui.end_row();

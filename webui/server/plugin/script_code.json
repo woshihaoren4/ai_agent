@@ -12,11 +12,19 @@
                     "default":"3.11.9",
                     "immobilization":true
                 },
-                "code":{
+                "script_code":{
                     "type":"string",
                     "default":"",
                     "required":true,
                     "ui_type":"script_code"
+                },
+                "function_name": {
+                    "type": "string",
+                    "default": "handle",
+                    "required":true
+                },
+                "input": {
+                    "type": "obj"
                 }
             },
             "output_vars": "The code output prevails!"
