@@ -28,7 +28,7 @@ impl MainView for FrameAbout<'_> {
                 ui.separator();
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.0;
-                    ui.label("webui running inside");
+                    ui.label("webui running inside ");
                     ui.hyperlink_to("ai_agent", "https://github.com/woshihaoren4/ai_agent");
                     ui.label(".");
                 });

@@ -47,6 +47,9 @@ impl Default for AppEntity {
 }
 
 impl AppEntity {
+    pub fn show_version(ui:&mut egui::Ui){
+        ui.label(egui::WidgetText::from("This is only an alpha version and there may be major changes in the future！！！").color(egui::Color32::GRAY));
+    }
     pub fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, cfg: &mut State) {
         //先绘制最顶部的内容
         egui::TopBottomPanel::top("wrap_app_top_bar").show(ctx, |ui| {
@@ -72,6 +75,9 @@ impl AppEntity {
                     }
                 }
                 cfg.layout_config.selected_anchor = selected_anchor.to_string();
+                //展示测试版本说明
+                ui.separator();
+                Self::show_version(ui);
             });
         });
         //底部
