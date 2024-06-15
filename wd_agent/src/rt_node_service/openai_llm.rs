@@ -1,13 +1,13 @@
+#![allow(deprecated)]
 use crate::rt_node_service::{CfgBound, LLMToolCallRequest};
 use agent_rt::Context;
 use async_openai::config::OpenAIConfig;
-use async_openai::types::{ChatCompletionMessageToolCall, ChatCompletionMessageToolCallChunk, ChatCompletionRequestAssistantMessage, ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage, ChatCompletionRequestSystemMessage, ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestToolMessage, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionRequestUserMessageContent, ChatCompletionTool, ChatCompletionToolType, CreateChatCompletionRequest, CreateChatCompletionRequestArgs, FunctionCall, Role};
+use async_openai::types::{ChatCompletionMessageToolCall, ChatCompletionMessageToolCallChunk, ChatCompletionRequestAssistantMessage, ChatCompletionRequestMessage, ChatCompletionRequestSystemMessage, ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestToolMessage, ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionRequestUserMessageContent, ChatCompletionTool, ChatCompletionToolType, CreateChatCompletionRequest, CreateChatCompletionRequestArgs, FunctionCall, Role};
 use async_openai::Client;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::Arc;
-use serde_json::Value;
 use wd_tools::PFErr;
 
 #[derive(Debug)]
@@ -76,6 +76,7 @@ impl LLMContextMessage {
                             arguments: call_args,
                         }
                     }]),
+
                     function_call: None,
                 })
             }
@@ -209,22 +210,6 @@ impl LLMNodeRequest {
                 )
             }
         }
-
-        println!("context=>{context:?}");
-
-        // context.push(ChatCompletionRequestAssistantMessageArgs::default()
-        //     .tool_calls([ChatCompletionMessageToolCall{
-        //         id : "call_y1AYG9AMQwrUP3yxoIRIIc6L".into(),
-        //         r#type: ChatCompletionToolType::Function,
-        //         function:FunctionCall{
-        //             name:"taobao_shop".into(),
-        //             arguments:"{\"gift\":\"LV包包\"}".into(),
-        //         }
-        //     }]).build().unwrap().into());
-        // context.push(ChatCompletionRequestToolMessageArgs::default()
-        //     .content("success".to_string())
-        //     .tool_call_id("call_y1AYG9AMQwrUP3yxoIRIIc6L")
-        //     .build().unwrap().into());
 
         if !query.is_empty() {
             context.push(

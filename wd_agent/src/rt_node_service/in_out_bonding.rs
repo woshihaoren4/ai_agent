@@ -4,7 +4,7 @@ use serde_json::{Map, Value};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 use std::str::FromStr;
-use wd_tools::{PFErr, SimpleRegexMatch};
+use wd_tools::{SimpleRegexMatch};
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct CfgBound<T> {

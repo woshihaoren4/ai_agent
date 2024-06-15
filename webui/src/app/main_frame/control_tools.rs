@@ -1,45 +1,14 @@
-use crate::app::main_frame::{MainView, WorkFlowDebugRequest};
+use crate::app::main_frame::{MainView};
 use crate::app::plugin_view::{ TopControlTools};
 use crate::app::state::{State};
 use eframe::Frame;
 use egui::{Context, Widget};
 use crate::app::main_frame::debug::Debug;
+use crate::app::main_frame::text_control_view::TextControlView;
 
 
 #[derive(Debug, Default)]
 pub struct ControlTools {}
-
-impl ControlTools {
-    pub fn text_view(ctx: &Context,cfg: &mut State){
-        if !cfg.options_view.text_view_open {
-            return;
-        }
-        if cfg.options_view.text_view_content.is_empty() {
-
-        }
-        egui::Window::new("plan-text-view")
-            .open(&mut cfg.options_view.text_view_open)
-            .show(ctx,|ui|{
-                if ui.button("update content").clicked() {
-                    let context = WorkFlowDebugRequest::new(&cfg.plugin.nodes)
-                        .map(|req|{
-                            serde_json::to_string_pretty(&req).unwrap_or_else(|err|{
-                                format!("json plan error:{}",err)
-                            })
-                        })
-                        .unwrap_or_else(|err|{
-                            format!("generate plan error:{}",err)
-                        });
-                    cfg.options_view.text_view_content = context;
-                }
-                ui.separator();
-                let width = ui.available_width();
-                egui::TextEdit::multiline(&mut cfg.options_view.text_view_content)
-                    .desired_width(width)
-                    .show(ui);
-            });
-    }
-}
 
 impl MainView for ControlTools {
     fn name(&self) -> &str {
@@ -137,6 +106,6 @@ impl MainView for ControlTools {
         //渲染已存在的节点
         TopControlTools::ui(ctx, cfg);
         //渲染text view
-        Self::text_view(ctx,cfg);
+        TextControlView::ui(ctx,cfg);
     }
 }

@@ -3,6 +3,7 @@ use prost_types::{ListValue, Struct, Value as ProstValue};
 use serde_json::{Number, Value};
 use std::collections::BTreeMap;
 
+#[allow(dead_code)]
 pub fn prost_struct_to_serde_value(p_struct: Struct) -> Value {
     let mut map = serde_json::Map::new();
     for (key, value) in p_struct.fields {
@@ -11,6 +12,7 @@ pub fn prost_struct_to_serde_value(p_struct: Struct) -> Value {
     Value::Object(map)
 }
 
+#[allow(dead_code)]
 pub fn prost_value_to_serde_value(p_value: prost_types::Value) -> Value {
     match p_value.kind {
         Some(Kind::NullValue(_)) => Value::Null,

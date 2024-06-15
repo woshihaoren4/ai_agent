@@ -1,0 +1,436 @@
+{
+  "end": {
+    "open": true,
+    "pos": {
+      "x": 203.0,
+      "y": 48.0
+    },
+    "input_pos": {
+      "x": 607.0,
+      "y": 139.0
+    },
+    "output_pos": {
+      "x": 690.25586,
+      "y": 139.0
+    },
+    "service": {
+      "code": "end",
+      "class": "FlowChart",
+      "desc": "input as output vars",
+      "ui_type": "window",
+      "service_type": "flow_chart_var",
+      "input_vars": {},
+      "custom_input_var": [{
+        "name": "answer",
+        "value": "{{llm.answer}}"
+      }],
+      "output_vars": "null"
+    },
+    "goto": [],
+    "goto_select": "",
+    "no_ready_all": true,
+    "debug_output": "{\n  \"answer\": \"谢谢，这是给你的LV包包。希望你喜欢！\"\n}"
+  },
+  "injector": {
+    "open": true,
+    "pos": {
+      "x": 203.0,
+      "y": 48.0
+    },
+    "input_pos": {
+      "x": -48.5,
+      "y": 110.0
+    },
+    "output_pos": {
+      "x": 57.58203,
+      "y": 110.0
+    },
+    "service": {
+      "code": "injector",
+      "class": "FlowChart",
+      "desc": "Perform an injection operation on a configuration",
+      "ui_type": "window",
+      "service_type": "flow_chart_injector",
+      "input_vars": {
+        "default": {
+          "type": "string",
+          "desc": "",
+          "value": "",
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "from": {
+          "type": "string",
+          "desc": "",
+          "value": "{{python.result}}",
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "operate": {
+          "type": "string",
+          "desc": "",
+          "value": "=",
+          "value_from": "",
+          "default": "=",
+          "required": false,
+          "immobilization": false,
+          "ui_type": "enum",
+          "ui_extend_slider": null,
+          "ui_extend_enum": ["=", "append"]
+        },
+        "to": {
+          "type": "string",
+          "desc": "",
+          "value": "llm.context",
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        }
+      },
+      "custom_input_var": [],
+      "output_vars": "null"
+    },
+    "goto": ["llm"],
+    "goto_select": "",
+    "no_ready_all": false,
+    "debug_output": ""
+  },
+  "llm": {
+    "open": true,
+    "pos": {
+      "x": 478.0,
+      "y": 48.0
+    },
+    "input_pos": {
+      "x": 258.5,
+      "y": 139.5
+    },
+    "output_pos": {
+      "x": 337.34424,
+      "y": 139.5
+    },
+    "service": {
+      "code": "llm",
+      "class": "LLM",
+      "desc": "openai LLM chat",
+      "ui_type": "window",
+      "service_type": "openai_llm",
+      "input_vars": {
+        "context": {
+          "type": "list",
+          "desc": "",
+          "value": [],
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "extend": {
+          "type": "object",
+          "desc": "",
+          "value": "{}",
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "max_tokens": {
+          "type": "number",
+          "desc": "answer max tokens",
+          "value": 512,
+          "value_from": "",
+          "default": 512,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": {
+            "slider_value": 512.0,
+            "max": 512.0,
+            "min": 0.0,
+            "speed": 1.0
+          },
+          "ui_extend_enum": null
+        },
+        "model": {
+          "type": "string",
+          "desc": "",
+          "value": "gpt-3.5-turbo",
+          "value_from": "",
+          "default": "gpt-3.5-turbo",
+          "required": false,
+          "immobilization": false,
+          "ui_type": "enum",
+          "ui_extend_slider": null,
+          "ui_extend_enum": ["gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+        },
+        "prompt": {
+          "type": "string",
+          "desc": "",
+          "value": "# 角色 #\n你是一渣男，说话总是花言巧语。\n\n# 要求 #\n对于喜欢你的人，你必须要送给她一个LV包包。",
+          "value_from": "",
+          "default": "",
+          "required": false,
+          "immobilization": false,
+          "ui_type": "text_edit_multi",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "query": {
+          "type": "string",
+          "desc": "",
+          "value": "{{start.query}}",
+          "value_from": "",
+          "default": "",
+          "required": true,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "temperature": {
+          "type": "f32",
+          "desc": "The randomness of the model generated responses",
+          "value": 0.7,
+          "value_from": "",
+          "default": 0.7,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": {
+            "slider_value": 0.7,
+            "max": 2.0,
+            "min": 0.0,
+            "speed": 0.01
+          },
+          "ui_extend_enum": null
+        },
+        "tools": {
+          "type": "list",
+          "desc": "",
+          "value": ["obj:{\"function\":{\"description\":\"在线送礼物\",\"name\":\"taobao_shop\",\"parameters\":{\"properties\":{\"gift\":{\"description\":\"礼物名称\",\"type\":\"string\"}},\"required\":[\"gift\"],\"type\":\"object\"}},\"type\":\"function\"}"],
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        }
+      },
+      "custom_input_var": [],
+      "output_vars": "{\n  \"answer\": \"this is text\",\n  \"tools\": [\n    {\n      \"args\": \"function call args\",\n      \"function_name\": \"tool name\"\n    }\n  ]\n}"
+    },
+    "goto": ["selector"],
+    "goto_select": "",
+    "no_ready_all": true,
+    "debug_output": "{\n  \"answer\": \"哇，那太棒了！作为一个绅士，我想送你一份特别的礼物来表达我的心意。让我给你买一个LV包包吧！请稍等，我马上就去下单购买。\",\n  \"tools\": [\n    {\n      \"args\": \"{\\\"gift\\\":\\\"LV包包\\\"}\",\n      \"call_id\": \"call_6K8CEzuWKwngaxQJ8HDuYcJT\",\n      \"name\": \"taobao_shop\"\n    }\n  ]\n}\n--->6:\n{\n  \"answer\": \"谢谢，这是给你的LV包包。希望你喜欢！\",\n  \"tools\": null\n}"
+  },
+  "python": {
+    "open": true,
+    "pos": {
+      "x": 952.0,
+      "y": 73.0
+    },
+    "input_pos": {
+      "x": 542.5,
+      "y": 409.5
+    },
+    "output_pos": {
+      "x": 644.5056,
+      "y": 409.5
+    },
+    "service": {
+      "code": "python",
+      "class": "Script",
+      "desc": "a python service",
+      "ui_type": "window",
+      "service_type": "python",
+      "input_vars": {
+        "function_name": {
+          "type": "string",
+          "desc": "",
+          "value": "handle",
+          "value_from": "",
+          "default": "handle",
+          "required": true,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "input": {
+          "type": "obj",
+          "desc": "",
+          "value": "{\n\t\"tools\":\"{{llm.tools}}\"\n}",
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "script_code": {
+          "type": "string",
+          "desc": "",
+          "value": "def handle(input):\n    data=input.data\n    tool=data[\"tools\"][0]\n    assistant={\"role\":\"assistant\",\"call_id\":tool[\"call_id\"],\"call_name\":tool[\"name\"],\"call_args\":tool[\"args\"]}\n    tool_result={\"role\":\"tool\",\"content\":\"success\",\"call_id\":tool[\"call_id\"]}\n    return {\"result\":[assistant,tool_result]}",
+          "value_from": "",
+          "default": "",
+          "required": true,
+          "immobilization": false,
+          "ui_type": "script_code",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "version": {
+          "type": "string",
+          "desc": "",
+          "value": "3.11.9",
+          "value_from": "",
+          "default": "3.11.9",
+          "required": false,
+          "immobilization": true,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        }
+      },
+      "custom_input_var": [],
+      "output_vars": "The code output prevails!"
+    },
+    "goto": ["injector"],
+    "goto_select": "",
+    "no_ready_all": false,
+    "debug_output": "{\n  \"result\": [\n    {\n      \"call_args\": \"{\\\"gift\\\":\\\"LV包包\\\"}\",\n      \"call_id\": \"call_6K8CEzuWKwngaxQJ8HDuYcJT\",\n      \"call_name\": \"taobao_shop\",\n      \"role\": \"assistant\"\n    },\n    {\n      \"call_id\": \"call_6K8CEzuWKwngaxQJ8HDuYcJT\",\n      \"content\": \"success\",\n      \"role\": \"tool\"\n    }\n  ]\n}"
+  },
+  "selector": {
+    "open": true,
+    "pos": {
+      "x": 969.0,
+      "y": 132.0
+    },
+    "input_pos": {
+      "x": 374.0,
+      "y": 211.0
+    },
+    "output_pos": {
+      "x": 482.08203,
+      "y": 211.0
+    },
+    "service": {
+      "code": "selector",
+      "class": "FlowChart",
+      "desc": "Select the branch execution according to the condition",
+      "ui_type": "window",
+      "service_type": "flow_chart_selector",
+      "input_vars": {
+        "condition": {
+          "type": "string",
+          "desc": "",
+          "value": "且",
+          "value_from": "",
+          "default": "且",
+          "required": false,
+          "immobilization": false,
+          "ui_type": "enum",
+          "ui_extend_slider": null,
+          "ui_extend_enum": ["且", "或"]
+        },
+        "false_goto": {
+          "type": "string",
+          "desc": "",
+          "value": "end",
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "true_goto": {
+          "type": "string",
+          "desc": "",
+          "value": "python",
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        },
+        "vars": {
+          "type": "array",
+          "desc": "三段条件表达式 var1 [comparator] var2",
+          "value": ["{{llm.tools}}", "no_null"],
+          "value_from": "",
+          "default": null,
+          "required": false,
+          "immobilization": false,
+          "ui_type": "",
+          "ui_extend_slider": null,
+          "ui_extend_enum": null
+        }
+      },
+      "custom_input_var": [],
+      "output_vars": "null"
+    },
+    "goto": ["python", "end"],
+    "goto_select": "",
+    "no_ready_all": false,
+    "debug_output": "\n--->7:\n"
+  },
+  "start": {
+    "open": true,
+    "pos": {
+      "x": 203.0,
+      "y": 48.0
+    },
+    "input_pos": {
+      "x": -74.0,
+      "y": 260.5
+    },
+    "output_pos": {
+      "x": 13.282959,
+      "y": 260.5
+    },
+    "service": {
+      "code": "start",
+      "class": "FlowChart",
+      "desc": "input as output vars",
+      "ui_type": "window",
+      "service_type": "flow_chart_var",
+      "input_vars": {},
+      "custom_input_var": [{
+        "name": "query",
+        "value": "我喜欢你"
+      }],
+      "output_vars": "null"
+    },
+    "goto": ["llm"],
+    "goto_select": "",
+    "no_ready_all": false,
+    "debug_output": "{\n  \"query\": \"我喜欢你\"\n}"
+  }
+}

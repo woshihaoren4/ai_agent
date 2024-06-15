@@ -61,7 +61,7 @@ impl proto::agent_service_server::AgentService for AgentServeEntity{
 
     async fn call(&self, request: Request<AgentServiceCallRequest>) -> Result<Response<Self::CallStream>, Status> {
         let (tx, rx) = tokio::sync::mpsc::channel::<Result<AgentServiceCallResponse, Status>>(128);
-        let AgentServiceCallRequest{ task_code, plan, input, mode } = request.into_inner();
+        let AgentServiceCallRequest{ task_code, plan, input, .. } = request.into_inner();
 
         let nodes = plan.into_iter().map(|x|{
             let AgentServiceNode{ code, service_type, cfg, ready_nodes, goto_nodes } = x;

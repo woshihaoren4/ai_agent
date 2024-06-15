@@ -63,7 +63,7 @@ impl InjectorService {
                         }
                         _ => return anyhow::anyhow!("InjectorService.find field failed [{}]",pos).err(),
                     }
-                    return return anyhow::anyhow!("CfgBound.not find field[{}]",pos).err();
+                    return anyhow::anyhow!("CfgBound.not find field[{}]",pos).err();
                 } else {
                     break
                 }
@@ -82,7 +82,7 @@ impl agent_rt::ServiceLayer for InjectorService {
     type Output = Value;
 
     async fn call(&self, _code: String, ctx: Arc<Context>, cfg: Self::Config) -> anyhow::Result<Self::Output> {
-        let InjectorServiceConfig { from, to, default, operate } = cfg.bound(&ctx)?;
+        let InjectorServiceConfig { from, to, operate,.. } = cfg.bound(&ctx)?;
         if to.is_empty() {
             return anyhow::anyhow!("InjectorService: from and to must have a value").err()
         }

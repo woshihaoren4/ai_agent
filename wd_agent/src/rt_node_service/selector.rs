@@ -18,7 +18,7 @@ impl SelectorService {
         };
         let comparator = if let Some(s) = vars.pop_front() {
             if let Value::String(s) = s {s}else{
-                return return anyhow::anyhow!("comparator must is string[==,!=,>,>=,<,<=,is_null,no_null,contain,no_contain]").err()
+                return anyhow::anyhow!("comparator must is string[==,!=,>,>=,<,<=,is_null,no_null,contain,no_contain]").err()
             }
         }else{
             return anyhow::anyhow!("comparator is nil,format: var1 [comparator] var2").err()

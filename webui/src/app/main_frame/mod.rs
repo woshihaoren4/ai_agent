@@ -12,6 +12,7 @@ mod project;
 mod setting;
 mod work_flow_view;
 mod debug;
+mod text_control_view;
 
 pub use debug::*;
 
