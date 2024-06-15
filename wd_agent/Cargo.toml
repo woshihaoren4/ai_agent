@@ -13,7 +13,7 @@ readme.workspace = true
 
 [dependencies]
 wd_log.workspace = true
-wd_tools = {worksapce = true,features = ["point-free","http","pool","regex_simple"]}
+wd_tools.worksapce = true
 anyhow.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
