@@ -53,6 +53,7 @@ impl TopControlTools {
                 goto,
                 goto_select,
                 debug_output,
+                no_ready_all,
                 ..
             } = node;
             let mut update = false;
@@ -95,7 +96,7 @@ impl TopControlTools {
                     });
                     //渲染跳出
                     ui.collapsing("GOTO", |ui| {
-                        GOTO::ui(ui, name, goto_select, goto, &mut node_list);
+                        GOTO::ui(ui, name, goto_select, goto, &mut node_list,no_ready_all);
                     });
                     //渲染出参
                     ui.collapsing("OUTPUT", |ui| {

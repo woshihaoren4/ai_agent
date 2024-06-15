@@ -126,7 +126,8 @@ impl agent_rt::ServiceLayer for SelectorService {
             if let Some(p) = x{
                 p.go = vec![go_next_node];
             }
-        }));
+            Ok(())
+        }))?;
         Ok(Value::Null)
     }
 }
@@ -155,7 +156,7 @@ mod test{
     pub async fn test_selector_service(){
 
         let rt = Runtime::default()
-            .register_service_layer("selector", SelectorService::default())
+            .register_service_layer("flow_chart_selector", SelectorService::default())
             .register_service_layer("flow_chart_var", VarFlowChartService::default())
             .launch();
 
@@ -173,7 +174,7 @@ mod test{
             "false_goto":"branch_002"
         });
 
-        let plan = PlanBuilder::start::<_,String>(("select-01","selector",serde_json::to_string(&cfg).unwrap()),vec![])
+        let plan = PlanBuilder::start::<_,String>(("select-01","flow_chart_selector",serde_json::to_string(&cfg).unwrap()),vec![])
             .fission_from_code("select-01",("branch_001","flow_chart_var",r#"{"result":"select node branch_001"}"#),vec![END_NODE_CODE])
             .fission_from_code("select-01",("branch_002","flow_chart_var",r#"{"result":"select node branch_002"}"#),vec![END_NODE_CODE])
             .end::<String,_>(vec![],("end","flow_chart_var",r#"{"result":"{{branch_001.result}}{{branch_002.result}}"}"#))

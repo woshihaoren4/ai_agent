@@ -1,4 +1,5 @@
 use egui::RichText;
+use crate::app::plugin_view::Common;
 
 pub struct GOTO;
 
@@ -9,7 +10,12 @@ impl GOTO {
         select: &mut String,
         goto: &mut Vec<String>,
         other: &mut Vec<String>,
+        no_ready_all : &mut bool,
     ) {
+        ui.horizontal(|ui|{
+            ui.label("No wait all nodes：");
+            ui.add(Common::toggle(no_ready_all));
+        });
         egui::Grid::new(format!("goto-grid-{name}"))
             .num_columns(2)
             .striped(true)

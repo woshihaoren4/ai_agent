@@ -151,10 +151,14 @@ impl WorkFlowDebugRequest {
         for (code,win) in value.iter(){
             for i in win.goto.iter() {
                 if let Some(node) = map.get_mut(i){
-                    node.ready_nodes.push(code.to_string());
+                    if !node.no_ready_all {
+                        node.ready_nodes.push(code.to_string());
+                    }
                 }else{
                     let mut plan_node= WorkFlowDebugPlanNode::default();
-                    plan_node.ready_nodes.push(code.to_string());
+                    if !plan_node.no_ready_all {
+                        plan_node.ready_nodes.push(code.to_string());
+                    }
                     map.insert(i.to_string(),plan_node);
                 }
             }
@@ -180,7 +184,9 @@ pub struct WorkFlowDebugPlanNode{
     pub service_type: String,
     pub cfg:String,
     pub ready_nodes:Vec<String>,
-    pub goto_nodes:Vec<String>
+    pub goto_nodes:Vec<String>,
+    #[serde(skip)]
+    pub no_ready_all: bool,
 }
 impl WorkFlowDebugPlanNode{
     pub fn copy_from_service(&mut self,win:&PluginServiceWin) -> anyhow::Result<()>{
@@ -188,6 +194,10 @@ impl WorkFlowDebugPlanNode{
         self.service_type = win.service.service_type.clone();
         self.cfg = serde_json::to_string(&Self::cfg_from_service(&win.service)?).unwrap_or("".into());
         self.goto_nodes = win.goto.clone();
+        if win.no_ready_all {
+            self.no_ready_all = true;
+            self.ready_nodes = vec![]
+        }
         Ok(())
     }
     pub fn cfg_from_service(ps:&PluginService)->anyhow::Result<Value>{

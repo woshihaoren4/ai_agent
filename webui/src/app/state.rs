@@ -150,6 +150,8 @@ pub struct PluginServiceWin {
     pub goto: Vec<String>,
     #[serde(default)]
     pub goto_select: String,
+    //是否需要等待所有进入分支完成？
+    pub no_ready_all : bool,
     #[serde(default)]
     pub debug_output: Option<String>
 

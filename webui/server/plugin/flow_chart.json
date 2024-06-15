@@ -9,6 +9,35 @@
       "input_vars": {
       },
       "output_vars": "null"
+    },
+    {
+      "code":"selector",
+      "class":"FlowChart",
+      "desc":"Select the branch execution according to the condition",
+      "ui_type":"window",
+      "service_type":"flow_chart_selector",
+      "input_vars": {
+        "condition": {
+          "type":"string",
+          "default":"且",
+          "ui_type": "enum",
+          "ui_extend_enum": [
+            "且",
+            "或"
+          ]
+        },
+        "true_goto": {
+          "type":"string"
+        },
+        "false_goto": {
+          "type":"string"
+        },
+        "vars": {
+          "type": "array",
+          "desc": "三段条件表达式 var1 [comparator] var2"
+        }
+      },
+      "output_vars": "null"
     }
   ]
 }

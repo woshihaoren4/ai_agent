@@ -345,10 +345,10 @@ impl Plan for LockPlan {
         }
     }
 
-    fn update(&self, node_code: &str, update: Box<dyn FnOnce(Option<&mut PlanNode>)>) {
+    fn update(&self,node_code:&str,update:Box<dyn FnOnce(Option<&mut PlanNode>)->anyhow::Result<()>>)->anyhow::Result<()>{
         let mut lock = self.map.lock().unwrap();
         let val = lock.get_mut(node_code);
-        update(val);
+        update(val)
     }
 }
 

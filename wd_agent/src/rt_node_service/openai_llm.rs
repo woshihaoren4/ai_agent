@@ -330,4 +330,9 @@ mod test {
             std::io::stdout().flush().unwrap();
         }
     }
+
+    #[tokio::test]
+    async fn test_llm_tools(){
+
+    }
 }

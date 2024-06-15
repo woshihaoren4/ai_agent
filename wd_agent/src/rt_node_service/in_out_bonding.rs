@@ -81,7 +81,7 @@ where
         let list = s.regex(r"\{\{(.*?)\}\}").unwrap_or(vec![]);
         list
     }
-    fn get_value_from_ctx(pos: &str, ctx: &Context) -> Option<Value> {
+    pub fn get_value_from_ctx(pos: &str, ctx: &Context) -> Option<Value> {
         let mut ks = pos.split(".").collect::<VecDeque<&str>>();
         let code = ks.pop_front()?;
         let res = ctx.get_opt(code, |x: Option<&mut Value>| {
