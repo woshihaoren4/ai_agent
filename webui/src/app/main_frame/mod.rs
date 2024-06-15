@@ -1,18 +1,18 @@
 use crate::app::main_frame::about::FrameAbout;
 use crate::app::main_frame::control_tools::ControlTools;
+use crate::app::main_frame::debug::Debug;
 use crate::app::main_frame::project::Project;
 use crate::app::main_frame::setting::FrameSetting;
 use crate::app::main_frame::work_flow_view::WorkFlowView;
 use crate::app::state::State;
-use crate::app::main_frame::debug::Debug;
 
 mod about;
 mod control_tools;
+mod debug;
 mod project;
 mod setting;
-mod work_flow_view;
-mod debug;
 mod text_control_view;
+mod work_flow_view;
 
 pub use debug::*;
 
@@ -25,7 +25,7 @@ pub struct AppEntity {
     items: Vec<Box<dyn MainView>>,
     tool_control: ControlTools,
     work_space: WorkFlowView,
-    debug : Debug,
+    debug: Debug,
 }
 impl Default for AppEntity {
     fn default() -> Self {
@@ -48,8 +48,13 @@ impl Default for AppEntity {
 }
 
 impl AppEntity {
-    pub fn show_version(ui:&mut egui::Ui){
-        ui.label(egui::WidgetText::from("This is only an alpha version and there may be major changes in the future！！！").color(egui::Color32::GRAY));
+    pub fn show_version(ui: &mut egui::Ui) {
+        ui.label(
+            egui::WidgetText::from(
+                "This is only an alpha version and there may be major changes in the future！！！",
+            )
+            .color(egui::Color32::GRAY),
+        );
     }
     pub fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, cfg: &mut State) {
         //先绘制最顶部的内容
@@ -82,7 +87,7 @@ impl AppEntity {
             });
         });
         //底部
-        self.debug.update(ctx,frame,cfg);
+        self.debug.update(ctx, frame, cfg);
         //绘制中部
         for i in self.items.iter_mut() {
             i.update(ctx, frame, cfg);

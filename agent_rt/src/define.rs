@@ -24,7 +24,6 @@ pub struct WakerCallBack {
     pub waker: Waker,
 }
 
-
 //fixme : need timeout wake
 pub trait WakerWaitPool: Send + Sync {
     fn push(&self, code: String, waker: WakerCallBack);
@@ -41,7 +40,11 @@ pub enum NextNodeResult {
 pub trait Plan: Send + Sync {
     fn next(&self, ctx: Arc<Context>, node_id: &str) -> NextNodeResult;
     fn set(&self, nodes: Vec<PlanNode>);
-    fn update(&self,node_code:&str,update:Box<dyn FnOnce(Option<&mut PlanNode>)->anyhow::Result<()>>)->anyhow::Result<()>;
+    fn update(
+        &self,
+        node_code: &str,
+        update: Box<dyn FnOnce(Option<&mut PlanNode>) -> anyhow::Result<()>>,
+    ) -> anyhow::Result<()>;
 }
 
 #[derive(Debug)]
@@ -67,16 +70,20 @@ where
     }
 }
 
-impl Plan for Box<dyn Plan>{
+impl Plan for Box<dyn Plan> {
     fn next(&self, ctx: Arc<Context>, node_id: &str) -> NextNodeResult {
-        (**self).next(ctx,node_id)
+        (**self).next(ctx, node_id)
     }
 
     fn set(&self, nodes: Vec<PlanNode>) {
         (**self).set(nodes)
     }
 
-    fn update(&self, node_code: &str, update: Box<dyn FnOnce(Option<&mut PlanNode>) -> anyhow::Result<()>>) -> anyhow::Result<()> {
-        (**self).update(node_code,update)
+    fn update(
+        &self,
+        node_code: &str,
+        update: Box<dyn FnOnce(Option<&mut PlanNode>) -> anyhow::Result<()>>,
+    ) -> anyhow::Result<()> {
+        (**self).update(node_code, update)
     }
 }

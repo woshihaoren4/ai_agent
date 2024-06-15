@@ -10,12 +10,16 @@ pub struct Node {
     pub node_type_id: String, //类型节点id
     pub node_config: String,  //类型节点配置
 }
-impl Node{
-    pub fn new<C:Into<String>,T:Into<String>,F:Into<String>>(code:C,ty:T,cfg:F)->Self{
+impl Node {
+    pub fn new<C: Into<String>, T: Into<String>, F: Into<String>>(code: C, ty: T, cfg: F) -> Self {
         let code = code.into();
         let node_type_id = ty.into();
         let node_config = cfg.into();
-        Self{code,node_type_id,node_config}
+        Self {
+            code,
+            node_type_id,
+            node_config,
+        }
     }
 }
 
@@ -37,22 +41,21 @@ pub struct PlanBuilder {
 }
 // ready,code,type_id,cfg,go
 impl<T> From<T> for PlanBuilder
-where T:IntoIterator<Item = (Vec<String>,Node,Vec<String>)>
+where
+    T: IntoIterator<Item = (Vec<String>, Node, Vec<String>)>,
 {
     fn from(value: T) -> Self {
         let mut map = HashMap::new();
-        for (ready,node,go) in value{
+        for (ready, node, go) in value {
             let code = node.code.clone();
-            let cfg =if node.node_config.is_empty() {
+            let cfg = if node.node_config.is_empty() {
                 None
-            }else{
+            } else {
                 Some(node)
             };
-            map.insert(code,PlanNode{
-                ready,go,cfg
-            });
+            map.insert(code, PlanNode { ready, go, cfg });
         }
-        Self{map}
+        Self { map }
     }
 }
 
@@ -75,11 +78,11 @@ impl From<(Node, Vec<String>)> for PlanNode {
     }
 }
 impl From<Vec<String>> for PlanNode {
-    fn from( go:  Vec<String>) -> Self {
+    fn from(go: Vec<String>) -> Self {
         Self {
             ready: vec![],
             go,
-            cfg:None,
+            cfg: None,
         }
     }
 }
@@ -178,7 +181,12 @@ impl PlanBuilder {
         let go = go.into_iter().map(|x| x.into()).collect::<Vec<String>>();
         self.insert_node((node.into(), go))
     }
-    pub fn fission_from_code<S: Into<String>, N: Into<Node>>(&mut self,pos:&str, node: N, go: Vec<S>) -> &mut Self {
+    pub fn fission_from_code<S: Into<String>, N: Into<Node>>(
+        &mut self,
+        pos: &str,
+        node: N,
+        go: Vec<S>,
+    ) -> &mut Self {
         let node = node.into();
         let p = self.map.get_mut(pos).unwrap();
         p.go.push(node.code.clone());
@@ -312,7 +320,7 @@ impl Plan for LockPlan {
         let p = if let Some(p) = lock.get_mut(node_code) {
             if p.ready.is_empty() && p.cfg.is_some() && node_code == START_NODE_CODE {
                 let node = std::mem::take(&mut p.cfg).unwrap();
-                return NextNodeResult::Nodes(vec![node])
+                return NextNodeResult::Nodes(vec![node]);
             }
             p.go.clone()
         } else {
@@ -351,7 +359,11 @@ impl Plan for LockPlan {
         }
     }
 
-    fn update(&self,node_code:&str,update:Box<dyn FnOnce(Option<&mut PlanNode>)->anyhow::Result<()>>)->anyhow::Result<()>{
+    fn update(
+        &self,
+        node_code: &str,
+        update: Box<dyn FnOnce(Option<&mut PlanNode>) -> anyhow::Result<()>>,
+    ) -> anyhow::Result<()> {
         let mut lock = self.map.lock().unwrap();
         let val = lock.get_mut(node_code);
         update(val)

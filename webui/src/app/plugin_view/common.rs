@@ -51,5 +51,4 @@ impl Common {
     pub fn toggle(on: &mut bool) -> impl egui::Widget + '_ {
         move |ui: &mut egui::Ui| Self::toggle_ui_compact(ui, on)
     }
-
 }

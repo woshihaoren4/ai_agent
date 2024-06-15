@@ -1,4 +1,4 @@
-use crate::app::plugin_view::{CustomInputField, Output, GOTO, ArrayView, ObjectView};
+use crate::app::plugin_view::{ArrayView, CustomInputField, ObjectView, Output, GOTO};
 use crate::app::state::{PluginService, PluginServiceWin, State};
 use egui::{Context, RichText};
 
@@ -14,14 +14,12 @@ impl TopControlTools {
                 "number" | "int" | "f32" | "float" | "double" => {
                     super::NumberSlider::ui(ui, name, var);
                 }
-                "bool" => {
-
-                }
+                "bool" => {}
                 "list" | "array" => {
-                    ArrayView::ui(ui,name,var);
+                    ArrayView::ui(ui, name, var);
                 }
                 "object" | "obj" => {
-                    ObjectView::ui(ui,name,var);
+                    ObjectView::ui(ui, name, var);
                 }
                 "null" => {
                     ui.label(format!("{name}: null"));
@@ -96,7 +94,7 @@ impl TopControlTools {
                     });
                     //渲染跳出
                     ui.collapsing("GOTO", |ui| {
-                        GOTO::ui(ui, name, goto_select, goto, &mut node_list,no_ready_all);
+                        GOTO::ui(ui, name, goto_select, goto, &mut node_list, no_ready_all);
                     });
                     //渲染出参
                     ui.collapsing("OUTPUT", |ui| {

@@ -32,7 +32,7 @@ impl InputStrViewTextEdit {
                 });
             }
             "text_edit_multi" => {
-                ui.collapsing(name,|ui|{
+                ui.collapsing(name, |ui| {
                     if max_height > 500.0 {
                         max_height = 500.0;
                     }
@@ -52,17 +52,17 @@ impl InputStrViewTextEdit {
                             });
                     }
                 });
-
             }
             "script_code" => {
-                ui.collapsing(name,|ui|{
+                ui.collapsing(name, |ui| {
                     if max_height > 800.0 {
                         max_height = 800.0;
                     }
 
                     let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
                         let language = "py";
-                        let theme = egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx());
+                        let theme =
+                            egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx());
                         let mut layout_job = egui_extras::syntax_highlighting::highlight(
                             ui.ctx(),
                             &theme,

@@ -2,7 +2,15 @@
 use crate::rt_node_service::{CfgBound, LLMToolCallRequest};
 use agent_rt::Context;
 use async_openai::config::OpenAIConfig;
-use async_openai::types::{ChatCompletionMessageToolCall, ChatCompletionMessageToolCallChunk, ChatCompletionRequestAssistantMessage, ChatCompletionRequestMessage, ChatCompletionRequestSystemMessage, ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestToolMessage, ChatCompletionRequestUserMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionRequestUserMessageContent, ChatCompletionTool, ChatCompletionToolType, CreateChatCompletionRequest, CreateChatCompletionRequestArgs, FunctionCall, Role};
+use async_openai::types::{
+    ChatCompletionMessageToolCall, ChatCompletionMessageToolCallChunk,
+    ChatCompletionRequestAssistantMessage, ChatCompletionRequestMessage,
+    ChatCompletionRequestSystemMessage, ChatCompletionRequestSystemMessageArgs,
+    ChatCompletionRequestToolMessage, ChatCompletionRequestUserMessage,
+    ChatCompletionRequestUserMessageArgs, ChatCompletionRequestUserMessageContent,
+    ChatCompletionTool, ChatCompletionToolType, CreateChatCompletionRequest,
+    CreateChatCompletionRequestArgs, FunctionCall, Role,
+};
 use async_openai::Client;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -36,37 +44,41 @@ pub struct LLMNodeRequest {
     pub query: String,
 }
 
-#[derive(Debug,Default, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(default)]
 pub struct LLMContextMessage {
-    pub role : String,
+    pub role: String,
     pub content: String,
 
-    pub call_id:String,
-    pub call_name:String,
-    pub call_args:String,
+    pub call_id: String,
+    pub call_name: String,
+    pub call_args: String,
 }
 
 impl LLMContextMessage {
-    pub fn to_chat_message(self) ->Option<ChatCompletionRequestMessage>  {
-        let Self{ role, content, call_id, call_name, call_args, } =self;
+    pub fn to_chat_message(self) -> Option<ChatCompletionRequestMessage> {
+        let Self {
+            role,
+            content,
+            call_id,
+            call_name,
+            call_args,
+        } = self;
         let msg = match role.to_lowercase().as_str() {
-            "system"=>{
-                ChatCompletionRequestMessage::System(ChatCompletionRequestSystemMessage{
-                    content,
-                    role: Role::System,
-                    name: None,
-                })
-            }
-            "assistant"=>{
-                let content= if content.is_empty() {
+            "system" => ChatCompletionRequestMessage::System(ChatCompletionRequestSystemMessage {
+                content,
+                role: Role::System,
+                name: None,
+            }),
+            "assistant" => {
+                let content = if content.is_empty() {
                     None
-                }else{
+                } else {
                     Some(content)
                 };
-                ChatCompletionRequestMessage::Assistant(ChatCompletionRequestAssistantMessage{
+                ChatCompletionRequestMessage::Assistant(ChatCompletionRequestAssistantMessage {
                     content,
-                    role: Role::Assistant ,
+                    role: Role::Assistant,
                     name: None,
                     tool_calls: Option::from(vec![ChatCompletionMessageToolCall {
                         id: call_id,
@@ -74,32 +86,24 @@ impl LLMContextMessage {
                         function: FunctionCall {
                             name: call_name,
                             arguments: call_args,
-                        }
+                        },
                     }]),
 
                     function_call: None,
                 })
             }
-            "user"=>{
-                ChatCompletionRequestMessage::User(ChatCompletionRequestUserMessage{
-                    content: ChatCompletionRequestUserMessageContent::Text(content),
-                    role: Role::User,
-                    name: None,
-                })
-            }
-            "tool"=>{
-                ChatCompletionRequestMessage::Tool(ChatCompletionRequestToolMessage{
-                    role: Role::Tool,
-                    content,
-                    tool_call_id: call_id,
-                })
-            }
-            "function"=>{
-                return None
-            }
-            _=>{
-                return None
-            }
+            "user" => ChatCompletionRequestMessage::User(ChatCompletionRequestUserMessage {
+                content: ChatCompletionRequestUserMessageContent::Text(content),
+                role: Role::User,
+                name: None,
+            }),
+            "tool" => ChatCompletionRequestMessage::Tool(ChatCompletionRequestToolMessage {
+                role: Role::Tool,
+                content,
+                tool_call_id: call_id,
+            }),
+            "function" => return None,
+            _ => return None,
         };
         Some(msg)
     }
@@ -149,7 +153,7 @@ impl LLMNodeResponse {
                             name: fcs.name.unwrap(),
                             args: fcs.arguments.unwrap_or("".into()),
                         })
-                    }else{
+                    } else {
                         if let Some(t) = vec.last_mut() {
                             t.args.push_str(fcs.arguments.unwrap_or("".into()).as_str());
                         }
@@ -166,7 +170,7 @@ impl LLMNodeRequest {
             prompt,
             model,
             tools,
-            context ,
+            context,
             query,
             max_tokens,
             temperature,
@@ -410,19 +414,25 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_llm_tools(){
+    async fn test_llm_tools() {
         let rt = Runtime::default()
             .register_service_layer("openai_llm", OpenaiLLMService::default())
             .launch();
 
         let cfg = "{\"extend\":{},\"max_tokens\":512,\"model\":\"gpt-3.5-turbo\",\"prompt\":\"# 角色 #\\n你是一渣男，说话总是花言巧语。\\n\\n# 要求 #\\n对于喜欢你的人，你必须要送给她一个`LV包包`。\",\"query\":\"{{start.query}}\",\"temperature\":0.7,\"tools\":[{\"function\":{\"description\":\"在线送礼物\",\"name\":\"taobao_shop\",\"parameters\":{\"properties\":{\"gift\":{\"description\":\"礼物名称\",\"type\":\"string\"}},\"required\":[\"gift\"],\"type\":\"object\"}},\"type\":\"function\"}]}";
 
-        let res = rt.ctx("openai-tool-test-0001",PlanBuilder::single_node("openai_llm",cfg).build())
+        let res = rt
+            .ctx(
+                "openai-tool-test-0001",
+                PlanBuilder::single_node("openai_llm", cfg).build(),
+            )
             .arc()
-            .block_on::<Value,_>(serde_json::json!({
+            .block_on::<Value, _>(serde_json::json!({
                 "query":"我喜欢你"
-            })).await.unwrap();
+            }))
+            .await
+            .unwrap();
 
-        println!("{}",res);
+        println!("{}", res);
     }
 }

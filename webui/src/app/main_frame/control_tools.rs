@@ -1,11 +1,10 @@
-use crate::app::main_frame::{MainView};
-use crate::app::plugin_view::{ TopControlTools};
-use crate::app::state::{State};
-use eframe::Frame;
-use egui::{Context, Widget};
 use crate::app::main_frame::debug::Debug;
 use crate::app::main_frame::text_control_view::TextControlView;
-
+use crate::app::main_frame::MainView;
+use crate::app::plugin_view::TopControlTools;
+use crate::app::state::State;
+use eframe::Frame;
+use egui::{Context, Widget};
 
 #[derive(Debug, Default)]
 pub struct ControlTools {}
@@ -29,8 +28,7 @@ impl MainView for ControlTools {
                             for i in i.iter() {
                                 if ui.button(i.code.as_str()).clicked() {
                                     services.push(i.clone());
-                                    cfg.debug_win
-                                        .debug(format!("create a node: {}", i.code));
+                                    cfg.debug_win.debug(format!("create a node: {}", i.code));
                                     // cfg.plugin_view.add_node(i.clone());
                                 }
                             }
@@ -62,7 +60,7 @@ impl MainView for ControlTools {
                         eframe::set_value(frame.storage_mut().unwrap(), eframe::APP_KEY, cfg);
                         cfg.debug_win.info("save success")
                     }
-                    Debug::debug_workflow(ctx,ui,cfg);
+                    Debug::debug_workflow(ctx, ui, cfg);
                 });
             });
         //渲染工具栏
@@ -106,6 +104,6 @@ impl MainView for ControlTools {
         //渲染已存在的节点
         TopControlTools::ui(ctx, cfg);
         //渲染text view
-        TextControlView::ui(ctx,cfg);
+        TextControlView::ui(ctx, cfg);
     }
 }

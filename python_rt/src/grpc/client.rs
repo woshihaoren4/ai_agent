@@ -8,7 +8,7 @@ use tonic::transport::{Channel, Uri};
 use wd_tools::pool::{ObjFactor, ObjPool};
 use wd_tools::{PFErr, PFOk};
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Client {
     pub pool: Arc<ObjPool<PythonRuntimeServiceClient<Channel>>>,
 }

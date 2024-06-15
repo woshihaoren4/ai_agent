@@ -1,5 +1,5 @@
-mod proto;
 mod agent_serve;
+mod proto;
 
 #[tokio::main]
 async fn main() {

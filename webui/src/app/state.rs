@@ -58,27 +58,27 @@ pub struct DebugCfg {
 
 impl DebugCfg {
     #[allow(dead_code)]
-    pub fn debug<S:Into<String>>(&mut self, log: S) {
+    pub fn debug<S: Into<String>>(&mut self, log: S) {
         self.level = "debug".into();
         self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn info<S:Into<String>>(&mut self, log:S) {
+    pub fn info<S: Into<String>>(&mut self, log: S) {
         self.level = "info".into();
         self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn warn<S:Into<String>>(&mut self, log:S) {
+    pub fn warn<S: Into<String>>(&mut self, log: S) {
         self.level = "warn".into();
         self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn error<S:Into<String>>(&mut self, log:S) {
+    pub fn error<S: Into<String>>(&mut self, log: S) {
         self.level = "error".into();
         self.log = log.into();
     }
     #[allow(dead_code)]
-    pub fn fatal<S:Into<String>>(&mut self, log:S) {
+    pub fn fatal<S: Into<String>>(&mut self, log: S) {
         self.level = "fatal".into();
         self.log = log.into();
     }
@@ -151,10 +151,9 @@ pub struct PluginServiceWin {
     #[serde(default)]
     pub goto_select: String,
     //是否需要等待所有进入分支完成？
-    pub no_ready_all : bool,
+    pub no_ready_all: bool,
     #[serde(default)]
-    pub debug_output: Option<String>
-
+    pub debug_output: Option<String>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
