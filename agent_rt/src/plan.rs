@@ -42,8 +42,14 @@ where T:IntoIterator<Item = (Vec<String>,Node,Vec<String>)>
     fn from(value: T) -> Self {
         let mut map = HashMap::new();
         for (ready,node,go) in value{
-            map.insert(node.code.clone(),PlanNode{
-                ready,go,cfg:Some(node)
+            let code = node.code.clone();
+            let cfg =if node.node_config.is_empty() {
+                None
+            }else{
+                Some(node)
+            };
+            map.insert(code,PlanNode{
+                ready,go,cfg
             });
         }
         Self{map}

@@ -1,0 +1,17 @@
+{
+  "plugin_list":[
+    {
+      "code":"custom_workflow",
+      "class":"Workflow",
+      "desc":"A workflow that can be freely defined",
+      "ui_type":"window",
+      "service_type":"workflow",
+      "input_vars": {
+        "workflow_name":{
+          "type":"string"
+        }
+      },
+      "output_vars": "The output of the specific workflow takes effect."
+    }
+  ]
+}

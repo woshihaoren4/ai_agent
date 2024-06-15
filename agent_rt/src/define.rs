@@ -24,6 +24,8 @@ pub struct WakerCallBack {
     pub waker: Waker,
 }
 
+
+//fixme : need timeout wake
 pub trait WakerWaitPool: Send + Sync {
     fn push(&self, code: String, waker: WakerCallBack);
     fn remove(&self, code: &str) -> Option<WakerCallBack>;
@@ -62,5 +64,19 @@ where
 {
     async fn call(&self, flow: Flow) -> anyhow::Result<Output> {
         (self.function)(flow).await
+    }
+}
+
+impl Plan for Box<dyn Plan>{
+    fn next(&self, ctx: Arc<Context>, node_id: &str) -> NextNodeResult {
+        (**self).next(ctx,node_id)
+    }
+
+    fn set(&self, nodes: Vec<PlanNode>) {
+        (**self).set(nodes)
+    }
+
+    fn update(&self, node_code: &str, update: Box<dyn FnOnce(Option<&mut PlanNode>) -> anyhow::Result<()>>) -> anyhow::Result<()> {
+        (**self).update(node_code,update)
     }
 }

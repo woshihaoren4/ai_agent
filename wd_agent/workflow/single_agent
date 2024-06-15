@@ -1,0 +1,63 @@
+{
+  "plan": [
+    {
+      "code": "selector",
+      "service_type": "flow_chart_selector",
+      "cfg": "{\"condition\":\"且\",\"false_goto\":\"end\",\"true_goto\":\"python\",\"vars\":[\"{{llm.tools}}\",\"no_null\"]}",
+      "ready_nodes": [
+        "llm"
+      ],
+      "goto_nodes": [
+        "python",
+        "end"
+      ]
+    },
+    {
+      "code": "start",
+      "service_type": "flow_chart_var",
+      "cfg": "",
+      "ready_nodes": [],
+      "goto_nodes": [
+        "llm"
+      ]
+    },
+    {
+      "code": "llm",
+      "service_type": "openai_llm",
+      "cfg": "{\"context\":[],\"extend\":{},\"max_tokens\":512,\"model\":\"gpt-3.5-turbo\",\"prompt\":\"# 角色 #\\n你是一渣男，说话总是花言巧语。\\n\\n# 要求 #\\n对于喜欢你的人，你必须要送给她一个LV包包。\",\"query\":\"{{start.query}}\",\"temperature\":0.7,\"tools\":[{\"function\":{\"description\":\"在线送礼物\",\"name\":\"taobao_shop\",\"parameters\":{\"properties\":{\"gift\":{\"description\":\"礼物名称\",\"type\":\"string\"}},\"required\":[\"gift\"],\"type\":\"object\"}},\"type\":\"function\"}]}",
+      "ready_nodes": [],
+      "goto_nodes": [
+        "selector"
+      ]
+    },
+    {
+      "code": "python",
+      "service_type": "python",
+      "cfg": "{\"function_name\":\"handle\",\"input\":{\"tools\":\"{{llm.tools}}\"},\"script_code\":\"def handle(input):\\n    data=input.data\\n    tool=data[\\\"tools\\\"][0]\\n    assistant={\\\"role\\\":\\\"assistant\\\",\\\"call_id\\\":tool[\\\"call_id\\\"],\\\"call_name\\\":tool[\\\"name\\\"],\\\"call_args\\\":tool[\\\"args\\\"]}\\n    tool_result={\\\"role\\\":\\\"tool\\\",\\\"content\\\":\\\"success\\\",\\\"call_id\\\":tool[\\\"call_id\\\"]}\\n    return {\\\"result\\\":[assistant,tool_result]}\",\"version\":\"3.11.9\"}",
+      "ready_nodes": [
+        "selector"
+      ],
+      "goto_nodes": [
+        "injector"
+      ]
+    },
+    {
+      "code": "end",
+      "service_type": "flow_chart_var",
+      "cfg": "{\"answer\":\"{{llm.answer}}\"}",
+      "ready_nodes": [],
+      "goto_nodes": []
+    },
+    {
+      "code": "injector",
+      "service_type": "flow_chart_injector",
+      "cfg": "{\"default\":\"\",\"from\":\"{{python.result}}\",\"operate\":\"=\",\"to\":\"llm.context\"}",
+      "ready_nodes": [
+        "python"
+      ],
+      "goto_nodes": [
+        "llm"
+      ]
+    }
+  ]
+}
