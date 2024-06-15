@@ -1,7 +1,7 @@
 mod serve_entity;
 pub mod common;
 
-use wd_agent::rt_node_service::PythonCodeService;
+use wd_agent::rt_node_service::{InjectorService, PythonCodeService, SelectorService};
 use crate::proto;
 
 pub async fn start(addr:&str) {
@@ -14,6 +14,8 @@ pub async fn start(addr:&str) {
     let rt = agent_rt::Runtime::default()
         .register_service_layer("openai_llm", openai_llm)
         .register_service_layer("python",python)
+        .register_service_layer("flow_chart_selector",SelectorService::default())
+        .register_service_layer("flow_chart_injector",InjectorService::default())
         .register_service_layer("flow_chart_var", var);
 
     //启动rpc服务

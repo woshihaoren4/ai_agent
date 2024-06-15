@@ -38,6 +38,34 @@
         }
       },
       "output_vars": "null"
+    },
+    {
+      "code":"injector",
+      "class":"FlowChart",
+      "desc":"Perform an injection operation on a configuration",
+      "ui_type":"window",
+      "service_type":"flow_chart_injector",
+      "input_vars": {
+        "from": {
+          "type":"string"
+        },
+        "to": {
+          "type":"string"
+        },
+        "default": {
+          "type":"string"
+        },
+        "operate": {
+          "type":"string",
+          "default":"=",
+          "ui_type": "enum",
+          "ui_extend_enum": [
+            "=",
+            "append"
+          ]
+        }
+      },
+      "output_vars": "null"
     }
   ]
 }

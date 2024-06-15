@@ -51,6 +51,9 @@
                 "tools":{
                     "type": "list"
                 },
+                "context": {
+                    "type": "list"
+                },
                 "extend":{
                     "type": "object"
                 }

@@ -67,7 +67,12 @@ impl Debug{
                     Ok(resp)=>{
                         if let Some(ref node) = resp.result {
                             if let Some(n) = cfg.plugin.nodes.get_mut(node.node_code.as_str()) {
-                                n.debug_output = Some(node.to_string());
+                                if let Some(ref mut s) = n.debug_output {
+                                    s.push_str(format!("\n--->{}:\n",node.round).as_str());
+                                    s.push_str(node.to_string().as_str())
+                                }else{
+                                    n.debug_output = Some(node.to_string());
+                                }
                             }else{
                                 cfg.debug_win.warn(format!("not found node win[{}]",node.node_code));
                             }
@@ -280,14 +285,14 @@ impl WorkFlowDebugPlanNode{
             let value = Number::from_f64(f).unwrap_or(Number::from(0));
             Ok(Value::Number(value))
         }else if s.starts_with("int:") {
-            let f = isize::from_str(&s[5..])?;
+            let f = isize::from_str(&s[4..])?;
             let value = Number::from(f);
             Ok(Value::Number(value))
         }else if s.starts_with("obj:"){
-            let value = serde_json::from_str::<Value>(&s[5..])?;
+            let value = serde_json::from_str::<Value>(&s[4..])?;
             Ok(value)
         }else if s.starts_with("list:"){
-            let value = serde_json::from_str::<Value>(&s[6..])?;
+            let value = serde_json::from_str::<Value>(&s[5..])?;
             Ok(value)
         }else{
             Ok(Value::String(s.to_string()))
