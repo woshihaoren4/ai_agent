@@ -25,6 +25,6 @@ trunk serve
 5. open addr `http://127.0.0.1:8080/index.html#dev`
 
 ## about
-- Architecture design and tutorials [goto]()
+- Architecture design and tutorials [goto](https://juejin.cn/column/7380579037112516658)
 - trunk install [goto](https://trunkrs.dev/)
 - upload plugin example: `webui/single_agent_plan.json`
