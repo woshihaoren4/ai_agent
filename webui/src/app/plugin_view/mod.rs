@@ -1,4 +1,5 @@
 mod array_view;
+mod bool_view;
 mod common;
 mod custom_input_field;
 mod debug;
@@ -8,9 +9,9 @@ mod object_view;
 mod output;
 mod render_service_node_win;
 mod string_text_edit;
-mod bool_view;
 
 pub use array_view::*;
+pub use bool_view::*;
 pub use common::*;
 pub use custom_input_field::*;
 pub use debug::*;
@@ -20,4 +21,3 @@ pub use object_view::*;
 pub use output::*;
 pub use render_service_node_win::*;
 pub use string_text_edit::*;
-pub use bool_view::*;

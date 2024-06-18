@@ -47,7 +47,8 @@ impl InjectorService {
                 let mut ks = pos.split(".").collect::<VecDeque<&str>>();
                 let code = ks.pop_front().unwrap_or("");
                 if x.is_none() {
-                    return anyhow::anyhow!("InjectorService.update not found node[{}]", code).err();
+                    return anyhow::anyhow!("InjectorService.update not found node[{}]", code)
+                        .err();
                 }
                 let plan = x.unwrap();
                 let node = if let Some(ref mut s) = plan.cfg {

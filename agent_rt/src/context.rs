@@ -125,11 +125,10 @@ impl Context {
     pub fn sub_ctx<C: Into<String>, P: Plan + 'static>(&self, code: C, plan: P) -> Self {
         let parent_code = self.code.clone();
         let stack = self.stack.clone();
-        Self::new(code, plan, self.runtime.clone())
-            .updates(|x|{
-                x.parent_code = Some(parent_code);
-                x.stack = stack;
-            })
+        Self::new(code, plan, self.runtime.clone()).updates(|x| {
+            x.parent_code = Some(parent_code);
+            x.stack = stack;
+        })
     }
     pub fn updates(mut self, f: impl FnOnce(&mut Self)) -> Self {
         f(&mut self);

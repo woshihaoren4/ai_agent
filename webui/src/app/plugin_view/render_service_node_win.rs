@@ -1,4 +1,4 @@
-use crate::app::plugin_view::{ArrayView, CustomInputField, ObjectView, Output, GOTO, BoolView};
+use crate::app::plugin_view::{ArrayView, BoolView, CustomInputField, ObjectView, Output, GOTO};
 use crate::app::state::{PluginService, PluginServiceWin, State};
 use egui::{Context, RichText};
 
@@ -15,7 +15,7 @@ impl TopControlTools {
                     super::NumberSlider::ui(ui, name, var);
                 }
                 "bool" => {
-                    BoolView::ui(ui,name,var);
+                    BoolView::ui(ui, name, var);
                 }
                 "list" | "array" => {
                     ArrayView::ui(ui, name, var);
