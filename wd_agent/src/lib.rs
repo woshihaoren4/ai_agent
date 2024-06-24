@@ -1,4 +1,4 @@
-mod plugin_tools;
+pub mod plugin_tools;
 pub mod rt_node_service;
 
 #[cfg(test)]

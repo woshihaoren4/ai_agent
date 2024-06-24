@@ -4,6 +4,7 @@ use agent_rt::{Context, ServiceLayer};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::sync::Arc;
+use serde_json::Value;
 
 #[async_trait::async_trait]
 pub trait ToolEvent: Send {
@@ -34,11 +35,14 @@ impl Default for ToolService {
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct LLMToolCallRequest {
     pub call_id: Option<String>,
     pub name: String,
     #[serde(default = "String::default")]
     pub args: String,
+    #[serde(flatten)]
+    pub input:Option<Value>
 }
 
 impl LLMToolCallRequest {
@@ -70,9 +74,15 @@ impl ServiceLayer for ToolService {
         let LLMToolCallRequest {
             call_id,
             name,
-            args,
+            mut args,
+            input,
         } = cfg;
-        wd_log::log_debug_ln!("code[{}] exec tool[{}] args:{:?}", code, name, args);
+
+        wd_log::log_debug_ln!("code[{}] exec tool[{}] args:{:?} input:{:?}", code, name, args,input);
+
+        if let Some(s) = input {
+            args = serde_json::to_string(&s)?;
+        }
 
         let content = self.loader.call(name.as_str(), args).await?;
 

@@ -5,6 +5,7 @@ use crate::proto;
 use wd_agent::rt_node_service::{
     InjectorService, PythonCodeService, SelectorService, WorkflowService,
 };
+use crate::tools::default_tool_service;
 
 pub async fn start(addr: &str) {
     //create service
@@ -13,6 +14,7 @@ pub async fn start(addr: &str) {
     let python = PythonCodeService::new("http://127.0.0.1:50001")
         .await
         .unwrap();
+    let tool = default_tool_service();
 
     //build agent runtime
     let rt = agent_rt::Runtime::default()
@@ -21,6 +23,7 @@ pub async fn start(addr: &str) {
         .register_service_layer("flow_chart_selector", SelectorService::default())
         .register_service_layer("flow_chart_injector", InjectorService::default())
         .register_service_layer("workflow", WorkflowService::default())
+        .register_service_layer("tool", tool)
         .register_service_layer("flow_chart_var", var);
 
     //启动rpc服务
