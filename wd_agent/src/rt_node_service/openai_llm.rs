@@ -152,6 +152,7 @@ impl LLMNodeResponse {
                             call_id: id,
                             name: fcs.name.unwrap(),
                             args: fcs.arguments.unwrap_or("".into()),
+                            input: None,
                         })
                     } else {
                         if let Some(t) = vec.last_mut() {
