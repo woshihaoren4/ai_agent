@@ -1,89 +1,59 @@
-use crate::context::Context;
-use crate::{Flow, Node, Output, PlanNode};
-use std::fmt::Debug;
-use std::future::Future;
+use std::collections::VecDeque;
 use std::sync::Arc;
-use std::task::Waker;
+use wd_tools::Ctx;
+use crate::Context;
 
-pub const START_NODE_CODE: &'static str = "start";
-pub const END_NODE_CODE: &'static str = "end";
-pub const END_RESULT_ERROR: &'static str = "xxx_rt_end_result_error";
-pub const END_ABNORMAL_END: &'static str = "xxx_rt_end_abnormal_end";
+pub struct ContextImpl{
 
-#[async_trait::async_trait]
-pub trait Service: Send + Sync {
-    async fn call(&self, flow: Flow) -> anyhow::Result<Output>;
 }
 
-pub trait ServiceLoader: Send + Sync {
-    fn get(&self, ids: &str) -> Option<Arc<dyn Service>>;
-    fn set(&self, nodes: Vec<(String, Arc<dyn Service>)>);
+pub struct Input{
+
+}
+pub struct Output{
+
 }
 
-pub struct WakerCallBack {
-    pub waker: Waker,
+pub struct Node{
+    pub name : String,
+    pub service_name: String,
+
+    pub(crate) middle_index : usize,
+    pub(crate) service : Arc<dyn Service>,
 }
 
-//fixme : need timeout wake
-pub trait WakerWaitPool: Send + Sync {
-    fn push(&self, code: String, waker: WakerCallBack);
-    fn remove(&self, code: &str) -> Option<WakerCallBack>;
+pub enum PlanResult{
+    Nodes(Vec<Node>),
+    End,
+    Wait,
 }
 
-#[derive(Debug)]
-pub enum NextNodeResult {
-    Over,             //没有下一个节点了
-    Wait,             //下一个节点未就绪
-    Error(String),    //只需等待即可
-    Nodes(Vec<Node>), //向下一个分支走
-}
-pub trait Plan: Send + Sync {
-    fn next(&self, ctx: Arc<Context>, node_id: &str) -> NextNodeResult;
-    fn set(&self, nodes: Vec<PlanNode>);
-    fn update(
-        &self,
-        node_code: &str,
-        update: Box<dyn FnOnce(Option<&mut PlanNode>) -> anyhow::Result<()>>,
-    ) -> anyhow::Result<()>;
-}
-
-#[derive(Debug)]
-pub struct ServiceFn<F> {
-    function: F,
-    // _p:PhantomData<Fut>,
-}
-impl<T> ServiceFn<T> {
-    pub fn new(function: T) -> ServiceFn<T> {
-        Self { function }
-        // Self{function,_p:PhantomData::default()}
+pub trait Plan : Send{
+    fn string(&self)->String{
+        "".into()
     }
+    fn next(&mut self,name:&str)->anyhow::Result<PlanResult>;
+    fn remove(&mut self,name:&str)->Option<Node>;
+    fn insert(&mut self,name:&str,node:Node);
 }
 
 #[async_trait::async_trait]
-impl<F, Fut> Service for ServiceFn<F>
-where
-    F: Fn(Flow) -> Fut + Send + Sync,
-    Fut: Future<Output = anyhow::Result<Output>> + Send,
-{
-    async fn call(&self, flow: Flow) -> anyhow::Result<Output> {
-        (self.function)(flow).await
-    }
+pub trait Service: Send {
+    async fn call(&self, ctx: Arc<Context>, node:Node) -> anyhow::Result<Output>;
 }
 
-impl Plan for Box<dyn Plan> {
-    fn next(&self, ctx: Arc<Context>, node_id: &str) -> NextNodeResult {
-        (**self).next(ctx, node_id)
+#[async_trait::async_trait]
+pub trait ServiceLoader {
+    async fn load(&self, name:&str)->Option<Arc<dyn Service>>;
+}
+
+#[async_trait::async_trait]
+pub trait ServiceMiddle: Send {
+    // true: Continue to execute
+    // false: Skip the middle
+    fn filter(&self,_node:&Node)->bool{
+        true
     }
 
-    fn set(&self, nodes: Vec<PlanNode>) {
-        (**self).set(nodes)
-    }
-
-    fn update(
-        &self,
-        node_code: &str,
-        update: Box<dyn FnOnce(Option<&mut PlanNode>) -> anyhow::Result<()>>,
-    ) -> anyhow::Result<()> {
-        (**self).update(node_code, update)
-    }
+    async fn call(&self, ctx: Arc<Context>, node:Node) -> anyhow::Result<Output>;
 }

@@ -1,51 +1,24 @@
-use std::error::Error;
-use std::fmt::{Display, Formatter};
-use wd_tools::PFErr;
+use std::fmt::{write, Debug, Display, Formatter};
+use crate::Output;
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum RTError {
-    ContextStatusAbnormal(String),
-    ContextAbort,
-    RuntimeDisable,
-    UnknownNodeId(String),
-    FlowLastNodeNil,
-
-    UNKNOWN(String),
+#[derive(Debug)]
+pub enum Error{
+    NextNodeNull
 }
-impl RTError {
-    pub fn anyhow<T>(self) -> anyhow::Result<T> {
-        anyhow::Error::from(self).err()
+
+impl<T> Into<anyhow::Result<T>> for Error{
+    fn into(self) -> anyhow::Result<T> {
+        Err(anyhow::Error::from(self))
     }
 }
-// impl From<RTError> for anyhow::Error{
-//     fn from(value: RTError) -> Self {
-//         anyhow::Error::from(value)
-//     }
-// }
 
-impl Display for RTError {
+impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            RTError::RuntimeDisable => {
-                write!(f, "runtime disable")
-            }
-            RTError::UnknownNodeId(id) => {
-                write!(f, "unknown node id[{}]", id)
-            }
-            RTError::FlowLastNodeNil => {
-                write!(f, "flow next illegality")
-            }
-            RTError::ContextStatusAbnormal(s) => {
-                write!(f, "ctx status abnormal:{}", s)
-            }
-            RTError::ContextAbort => {
-                write!(f, "context abort running")
-            }
-            RTError::UNKNOWN(s) => {
-                write!(f, "{}", s)
-            }
-        }
+            Error::NextNodeNull => {
+                write!(f,">NextNodeNull< next node is null, service node can not call next function.")
+            } }
     }
 }
 
-impl Error for RTError {}
+impl std::error::Error for Error{}
