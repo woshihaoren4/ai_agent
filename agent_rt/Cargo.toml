@@ -15,7 +15,7 @@ readme.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
-wd_tools = {workspace = true,features = ["sync"]}
+wd_tools = { version = "0.13.14",features = ["sync"]}
 wd_log.workspace = true
 async-trait.workspace = true
 serde.workspace = true

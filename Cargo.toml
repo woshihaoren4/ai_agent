@@ -12,8 +12,8 @@ license = "MIT"
 readme = "README.md"
 
 [workspace.dependencies]
-wd_tools = {version = "0.13.14",features = ["point-free","sync","ptr","md5","hex","time","http","b64","pool","regex_simple"]}
-wd_log = "0.3.0"
+wd_tools = {version = "0.13.14",features = ["full"]}
+wd_log = "0.4.0"
 anyhow = "1.0.75"
 async-trait = "0.1.77"
 serde = {version = "1.0.188",features = ["derive"]}

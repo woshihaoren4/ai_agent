@@ -1,6 +1,5 @@
-use std::collections::VecDeque;
+use std::future::Future;
 use std::sync::Arc;
-use wd_tools::Ctx;
 use crate::Context;
 
 pub struct ContextImpl{
@@ -39,7 +38,7 @@ pub trait Plan : Send{
 
 #[async_trait::async_trait]
 pub trait Service: Send {
-    async fn call(&self, ctx: Arc<Context>, node:Node) -> anyhow::Result<Output>;
+    async fn call(&self, ctx: Context, node:Node) -> anyhow::Result<Output>;
 }
 
 #[async_trait::async_trait]
@@ -55,5 +54,10 @@ pub trait ServiceMiddle: Send {
         true
     }
 
-    async fn call(&self, ctx: Arc<Context>, node:Node) -> anyhow::Result<Output>;
+    async fn call(&self, ctx: Context, node:Node) -> anyhow::Result<Output>;
+}
+
+#[async_trait::async_trait]
+pub trait ProgramPool {
+    async fn run(&self,fut:Box<dyn Future<Output=()> + Send>)->anyhow::Result<()>;
 }

@@ -1,14 +1,16 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use crate::{Context, Input, Output, Plan, PlanResult, ServiceLoader, ServiceMiddle};
+use crate::{ProgramPool, Context, Input, Output, Plan, PlanResult, ServiceLoader, ServiceMiddle};
 use crate::consts::START_NODE_NAME;
+use crate::context::ContextEntity;
 
 pub struct Runtime{
     pub(crate) entity:Arc<RuntimeEntity>
 }
 pub struct RuntimeEntity{
-    pub(crate) services : Arc<dyn ServiceLoader>,
-    pub(crate) middles : Arc<Vec<Arc<dyn ServiceMiddle>>>,
+    pub services : Box<dyn ServiceLoader>,
+    pub middles : Box<Vec<Arc<dyn ServiceMiddle>>>,
+    pub thread_pool : Box<dyn ProgramPool>
 }
 
 impl Clone for Runtime{
@@ -19,15 +21,14 @@ impl Clone for Runtime{
 
 impl Runtime{
     pub fn context<P:Plan+ Sync>(&self,p:P)->Context{
-        Context::new(self.clone(),p)
+        ContextEntity::new(self.clone(),p).build()
     }
 }
 
 impl Runtime{
-    pub async fn execute_node(ctx: Arc<Context>,node_name: &str)->anyhow::Result<()>{
-        let mut lock = ctx.plan.lock().await;
-        let plan_result = lock.next(node_name)?;
-        let nodes = match plan_result {
+    pub async fn execute_node(ctx: Context,node_name: &str)->anyhow::Result<()>{
+        let result = ctx.node_goto(node_name).await?;
+        let nodes = match result {
             PlanResult::Nodes(s) => s,
             PlanResult::End => {
                 return Ok(())
