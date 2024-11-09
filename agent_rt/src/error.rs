@@ -1,5 +1,4 @@
-use std::fmt::{write, Debug, Display, Formatter};
-use crate::Output;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
 pub enum Error{

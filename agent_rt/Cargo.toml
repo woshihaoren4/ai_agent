@@ -15,9 +15,11 @@ readme.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
-wd_tools = { version = "0.13.14",features = ["sync"]}
+wd_tools = { version = "0.13.14",features = ["sync","point-free"]}
 wd_log.workspace = true
 async-trait.workspace = true
 serde.workspace = true
+pin-project-lite = {version = "0.2.9"}
 
 async-channel = "2.2.0"
+pin-project = "1.1.5"
