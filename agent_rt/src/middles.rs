@@ -1,5 +1,7 @@
 use crate::{Context, Node, Output, PlanResult, Runtime};
 
+
+
 impl Runtime{
     pub async fn input_output_middle(mut ctx: Context, node: Node) ->anyhow::Result<Output>{
         let result = Ok(Output::new(0));
@@ -14,11 +16,12 @@ impl Runtime{
             ctx.error(e);
             return result
         }
-        let out = node_result.unwrap();
         let plan = ctx.ctx(|c|{
             c.plan.next(&node_name)
         }).await;
-        ctx = ctx.set_box_any(node_name,out.into_box());
+        if let Ok(out) = node_result {
+            ctx = ctx.set_box_any(node_name,out.into_box());
+        }
         if let Err(e) = plan {
             ctx.error(e);
             return result

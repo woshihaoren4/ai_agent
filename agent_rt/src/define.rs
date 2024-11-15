@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use crate::Context;
+use crate::{Context, END_NODE_NAME, START_NODE_NAME};
 
 pub struct ContextImpl{
 
@@ -61,7 +61,12 @@ pub trait Plan : Send{
     fn string(&self)->String{
         "".into()
     }
-    fn get(&self,name:&str)->Option<&Node>;
+    fn start_node_name(&self)->&str {
+        START_NODE_NAME
+    }
+    fn end_node_name(&self)->&str {
+        END_NODE_NAME
+    }
     fn next(&mut self,name:&str)->anyhow::Result<PlanResult>;
     fn remove(&mut self,name:&str)->Option<Node>;
     fn insert(&mut self,name:&str,node:Node);

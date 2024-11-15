@@ -1,13 +1,11 @@
 use std::any::Any;
 use std::future::Future;
-use std::ops::DerefMut;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Poll, Waker};
+use std::task::{Poll};
 use pin_project_lite::pin_project;
 use wd_tools::PFErr;
-use crate::{ProgramPool, Context, Output, Plan, ServiceLoader, ServiceMiddle, TaskFlowHook, ServiceLoaderImpl, ProgramPoolImpl, ServiceFn, Node};
-use crate::consts::{END_NODE_NAME, START_NODE_NAME,AGENT_RT_QUERY_KEY};
+use crate::{ProgramPool, Context, Output, Plan, ServiceLoader, ServiceMiddle, TaskFlowHook, ServiceLoaderImpl, ProgramPoolImpl, ServiceFn, Node, PlanResult};
 use crate::context::{ContextEntity, CtxStatus};
 
 
@@ -87,11 +85,17 @@ impl Runtime{
 
 impl Runtime{
     pub async fn go<In:Any,Out:Any>(mut ctx: Context,input: In)->anyhow::Result<Out>{
-        ctx = ctx.set(AGENT_RT_QUERY_KEY,input);
+        let start_node_name = ctx.lock(|c|{
+            c.plan.start_node_name().to_string()
+        });
+        ctx = ctx.set(start_node_name,input);
         Self::start_and_wait_task_over(ctx.clone()).await;
+        let end_node_name = ctx.lock(|c|{
+            c.plan.end_node_name().to_string()
+        });
         match ctx.into_status() {
             CtxStatus::SUCCESS => {
-                ctx.remove(END_NODE_NAME).await
+                ctx.remove(end_node_name.as_str()).await
             }
             CtxStatus::Error(e) => {
                 Err(e)
@@ -102,13 +106,13 @@ impl Runtime{
         }
     }
     pub async fn start_and_wait_task_over(mut ctx: Context){
-        let (node,rt) =  match ctx.ctx(|c|{
-            let node = if let Some(s) = c.plan.get(START_NODE_NAME) {
-                s.clone()
+        let (nodes,rt) =  match ctx.ctx(|c|{
+            let start_node_name = c.plan.start_node_name().to_string();
+            if let PlanResult::Nodes(nodes) = c.plan.next(start_node_name.as_str())?{
+                Ok((nodes,c.rt.clone()))
             }else{
-                return anyhow::anyhow!("Node[{}] not found",START_NODE_NAME).err()
-            };
-            Ok((node,c.rt.clone()))
+                anyhow::anyhow!("plan start node result is not PlanResult::Nodes").err()
+            }
         }).await {
             Ok(o)=>o,
             Err(e)=>{
@@ -129,9 +133,18 @@ impl Runtime{
         let actx = ctx.clone();
         tokio::spawn(async move {
             wait.await;
-            if let Err(e) = art.entity.thread_pool.push(Box::pin(actx.clone().next(node))).await{
-                actx.error(e);
-                return
+            for mut i in nodes{
+                let service = art.entity.services.load(i.service_name.as_str()).await;
+                if let Some(s) = service {
+                    i = i.set_service_are(s)
+                }else{
+                    actx.error(anyhow::anyhow!("Node[{}].service[{}] not found",i.name,i.service_name));
+                    return
+                }
+                if let Err(e) = art.entity.thread_pool.push(Box::pin(actx.clone().next(i))).await{
+                    actx.error(e);
+                    return
+                }
             }
         });
         if let Err(e) = task.await{

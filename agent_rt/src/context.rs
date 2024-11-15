@@ -17,7 +17,12 @@ impl Clone for Context{
         Self{ce}
     }
 }
-
+fn type_of<T>(_: &T) -> &'static str {
+    std::any::type_name::<T>()
+}
+fn type_of_none<T>() -> &'static str {
+    std::any::type_name::<T>()
+}
 pub struct ContextEntity{
     pub status : CtxStatus,
     pub waker: Option<Waker>,

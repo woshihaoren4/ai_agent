@@ -17,12 +17,11 @@ impl GraphPlan{
 }
 
 impl super::Plan for GraphPlan{
-    fn get(&self, name: &str) -> Option<&Node> {
-        Some(&self.start)
-    }
-
     fn next(&mut self, name: &str) -> anyhow::Result<PlanResult> {
-        if name == "end"{
+        if name == self.start_node_name() {
+            return Ok(PlanResult::Nodes(vec![self.start.clone()]))
+        }
+        if name == self.end_node_name(){
             return PlanResult::End.ok();
         }
         Ok(PlanResult::Nodes(vec![self.end.clone()]))

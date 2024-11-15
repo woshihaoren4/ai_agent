@@ -23,9 +23,11 @@ mod tests {
         let rt = RuntimeBuilder::default()
             .set_service_loader(ServiceLoaderImpl::default()
                 .register_fn("start",|_ctx,_node|async {
+                    println!("service --->1");
                     Ok(Output::new("start_service_success".to_string()))
                 })
                 .register_fn("end",|_ctx,_node|async {
+                    println!("service --->2");
                     Ok(Output::new("end_service_success".to_string()))
                 }))
             .register_service_middle_fn(|c,n|{
@@ -43,6 +45,7 @@ mod tests {
             .build();
         let result = rt.context(GraphPlan::test()).go::<_,String>("hello world").await;
         println!("{result:?}");
+        assert_eq!("end_service_success",result.unwrap().as_str())
     }
 
 }
