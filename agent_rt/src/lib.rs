@@ -3,14 +3,14 @@ mod context;
 mod define;
 mod error;
 mod middles;
-mod plan;
+mod graph_plan;
 mod runtime;
 
 pub use consts::*;
 pub use context::Context;
 pub use define::*;
 pub use error::Error;
-pub use plan::*;
+pub use graph_plan::*;
 pub use runtime::*;
 
 #[cfg(test)]

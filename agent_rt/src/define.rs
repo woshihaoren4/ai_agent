@@ -1,9 +1,11 @@
 use crate::{Context, END_NODE_NAME, START_NODE_NAME};
 use std::any::Any;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use serde_json::Value;
 
 pub struct ContextImpl {}
 pub struct Output {
@@ -22,13 +24,24 @@ impl Output {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug,Eq)]
 pub struct Node {
     pub name: String,
     pub service_name: String,
+    pub val_config: Option<Value>,
 
     pub(crate) middle_index: usize,
     pub(crate) service: Arc<dyn Service + Sync + 'static>,
+}
+impl Display for Node {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f,"agent_rt::Node[name:{},service_name:{}]",self.name,self.service_name)
+    }
+}
+impl PartialEq for Node{
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.service_name == other.service_name
+    }
 }
 impl Node {
     pub fn new<N: Into<String>>(name: N) -> Self {
@@ -36,6 +49,7 @@ impl Node {
         Self {
             name: name.clone(),
             service_name: name,
+            val_config: None,
             middle_index: 0,
             service: Arc::new(()),
         }
@@ -48,13 +62,27 @@ impl Node {
         self.service = service;
         self
     }
+    pub fn set_value(mut self,val:Value)->Self{
+        self.val_config = Some(val);self
+    }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug,Eq, PartialEq)]
 pub enum PlanResult {
     Nodes(Vec<Node>),
     End,
     Wait,
+}
+#[derive(Clone,Debug,Eq, PartialEq)]
+pub struct PlanNode{
+    pub from : Vec<String>,
+    pub to:Vec<String>,
+    pub node: Node
+}
+impl From<(Vec<String>,Node,Vec<String>)> for PlanNode{
+    fn from((from,node,to): (Vec<String>, Node, Vec<String>)) -> Self {
+        PlanNode{from,node,to}
+    }
 }
 
 pub trait Plan: Send {
@@ -67,9 +95,10 @@ pub trait Plan: Send {
     fn end_node_name(&self) -> &str {
         END_NODE_NAME
     }
+    fn get(&mut self,name:&str)->Option<&PlanNode>;
     fn next(&mut self, name: &str) -> anyhow::Result<PlanResult>;
-    fn remove(&mut self, name: &str) -> Option<Node>;
-    fn insert(&mut self, name: &str, node: Node);
+    fn remove(&mut self, name: &str) -> Option<PlanNode>;
+    fn insert(&mut self, node: PlanNode);
 }
 
 #[async_trait::async_trait]
