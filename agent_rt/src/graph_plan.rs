@@ -1,42 +1,52 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use serde::Deserialize;
 use serde_json::Value;
 use wd_tools::PFErr;
-use crate::{Node, Plan, PlanNode, PlanResult};
+use crate::{Node, Plan, PlanResult};
 
-
-
+#[derive(Clone,Default,Debug)]
+pub struct GraphNode{
+    pub node_name:String,
+    pub over_nodes:HashSet<String>,
+    pub goto_condition: Vec<String>,
+    pub goto:Vec<String>,
+}
+impl GraphNode {
+    pub fn new<N:Into<String>>(node_name:N)->Self{
+        let mut gn = GraphNode::default();
+        gn.node_name = node_name.into();
+        gn
+    }
+    pub fn add_goto<N:Into<String>>(&mut self,name:N){
+        let name = name.into();
+        if !self.goto.contains(&name) {
+            self.goto.push(name)
+        }
+    }
+    pub fn add_goto_cond<N:Into<String>>(&mut self,name:N){
+        let name = name.into();
+        if !self.goto_condition.contains(&name) {
+            self.goto_condition.push(name)
+        }
+    }
+}
 
 #[derive(Clone,Default,Debug)]
 pub struct GraphPlan {
-    map:HashMap<String,PlanNode>,
+    nodes:HashMap<String,Node>,
+    graph:HashMap<String,GraphNode>,
     start_node_name:String,
     end_node_name:String,
 }
 
 impl GraphPlan{
-    pub fn add_plan_node<N:Into<PlanNode>>(&mut self,node:N){
+    pub fn add_plan_node<N:Into<Node>>(&mut self,node:N){
         let node = node.into();
         self.insert(node)
     }
-    pub fn add_exec_node<N:Into<Node>>(&mut self,node:N){
+    pub fn add_graph_node<S:Into<String>,N:Into<GraphNode>>(&mut self,name:S, node:N)->Option<GraphNode>{
         let node = node.into();
-        self.add_plan_node((vec![],node,vec![]))
-    }
-    pub fn must_set_node_from<S:Into<String>,I:Iterator<Item=S>>(&mut self,name:&str, from:I){
-        let from = from.map(|x|x.into()).collect::<Vec<_>>();
-        if let Some(s) = self.map.get_mut(name){
-            s.from = from;
-        }
-    }
-    pub fn must_set_node_to<S:Into<String>,I:Iterator<Item=S>>(&mut self,name:&str, to:I){
-        let to = to.map(|x|x.into()).collect::<Vec<_>>();
-        if let Some(s) = self.map.get_mut(name){
-            s.to = to;
-        }
-    }
-    pub fn get_node_mut(&mut self,name:&str)->Option<&mut PlanNode>{
-        self.map.get_mut(name)
+        self.graph.insert(name.into(),node)
     }
 }
 
@@ -45,7 +55,7 @@ impl TryFrom<&str> for GraphPlan {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let mut graph = GraphPlan::default();
-        GraphPlanBuilder::from_text(value,&mut graph)?;
+        GraphPlanBuilder::default().from_text(value,&mut graph)?;
         Ok(graph)
     }
 }
@@ -57,49 +67,54 @@ impl Plan for GraphPlan {
     fn end_node_name(&self) -> &str {
         self.end_node_name.as_str()
     }
-    fn get(&mut self, name: &str) -> Option<&PlanNode> {
-        self.map.get(name)
+    fn get(&mut self, name: &str) -> Option<&Node> {
+        self.nodes.get(name)
     }
     fn next(&mut self, name: &str) -> anyhow::Result<PlanResult> {
-        if name == self.end_node_name.as_str() {
+        if name == self.end_node_name {
             return Ok(PlanResult::End)
         }
-        let node = match self.map.get(name) {
-            None => {
-                return anyhow::anyhow!("GraphPlan.Node[{name}] not found").err()
-            }
-            Some(s) => s,
+        let node = if let Some(node) = self.graph.get(name){
+            node
+        }else{
+            return anyhow::anyhow!("GraphPlan.next GraphNode[{name}] not found").err()
         };
-        if node.to.is_empty() {
-            return anyhow::anyhow!("GraphPlan.Node.next_nodes is empty").err()
-        }
-        let mut plan_nodes = vec![];
-        for i in node.to.iter() {
-            if let Some(n) = self.map.get(i) {
-                for j in 0..n.from.len() {
-                    if n.from[j].as_str() == i {
-                        n.from.remove(j);
-                        break
-                    }
+        let mut goto = vec![];
+        'loop_nodes: for i in node.goto.iter(){
+            let goto_node = if let Some(s) = self.graph.get_mut(i) {s}else{
+                return anyhow::anyhow!("GraphPlan.next GraphNode[{i}] not found").err()
+            };
+            goto_node.over_nodes.insert(i.to_string());
+            //判断条件是否达成
+            for j in goto_node.goto_condition.iter(){
+                if !goto_node.over_nodes.contains(j) {
+                    continue 'loop_nodes
                 }
+            }
+            goto_node.over_nodes.clear();
+            if let Some(s) = self.nodes.get(i) {
+                goto.push(s.clone())
             }else{
-                return anyhow::anyhow!("GraphPlan.Node[{i}] not found").err()
+                return anyhow::anyhow!("GraphPlan.next Node[{i}] not found").err()
             }
         }
-        Ok(PlanResult::Wait)
+        if goto.is_empty() {
+            return Ok(PlanResult::Wait)
+        }
+        Ok(PlanResult::Nodes(goto))
     }
-    fn remove(&mut self, name: &str) -> Option<PlanNode> {
-        self.remove(name)
+    fn remove(&mut self, name: &str) -> Option<Node> {
+        todo!()
     }
-    fn insert(&mut self, node: PlanNode) {
-        self.map.insert(node.node.name.clone(),node);
+    fn insert(&mut self, node: Node) {
+        todo!()
     }
 }
 
 /// ### Example of declaring an execution plan in text
 /// ```text
 /// // This is a annotation
-/// [setting]:toml:
+/// [setting]::
 ///
 ///
 ///
@@ -120,7 +135,7 @@ impl Plan for GraphPlan {
 /// node_b,node_c -> node_d
 ///
 ///
-/// [flow]:flow_name_2
+/// [flow]:flow_name_2::
 /// node_a,node_b -> node_c
 /// node_c -> node_d
 /// ```
@@ -131,9 +146,7 @@ macro_rules! text_builder_error {
     };
 }
 
-pub struct GraphPlanBuilder;
-
-#[derive(Deserialize)]
+#[derive(Clone,Debug,Default,Deserialize)]
 #[serde(default)]
 struct GraphPlanBuilderSetting{
     start_node:String,
@@ -147,132 +160,243 @@ impl Default for GraphPlanBuilderSetting {
         }
     }
 }
-
-#[derive(Default)]
-enum GraphPlanBuilderEnum{
-    Setting(String),
-    Node(Vec<String>,String,String,String), //node_name,decoder name,service,content
-    Flow(String,Vec<(String,String)>), //flow_name, flow_config
-    #[default]
-    None,
+#[derive(Debug,Default,Clone)]
+struct GraphPlanBuilderFlow{
+    from_is_flow : bool,
+    from:String,
+    to_is_flow: bool,
+    to:String,
+    goto_need_verify:bool,
 }
-impl GraphPlanBuilderEnum {
-    pub fn assemble(&mut self,graph:&mut GraphPlan,mut new_builder:GraphPlanBuilderEnum)->anyhow::Result<()>{
-        std::mem::swap(self,&mut new_builder);
-        match new_builder {
-            GraphPlanBuilderEnum::Setting(config) => {
-                let setting = toml::from_str::<GraphPlanBuilderSetting>(config.as_str())?;
-                graph.start_node_name = setting.start_node;
-                graph.end_node_name = setting.end_node;
+impl  GraphPlanBuilderFlow {
+    pub fn from_name(&self,flow:&str)->String{
+        GraphPlanBuilder::make_graph_name(flow,self.from.as_str())
+    }
+    pub fn to_name(&self,flow:&str)->String{
+        GraphPlanBuilder::make_graph_name(flow,self.to.as_str())
+    }
+}
+#[derive(Debug,Default)]
+pub struct GraphPlanBuilder{
+    setting : GraphPlanBuilderSetting,
+    nodes:HashMap<String,Node>,
+    graph:HashMap<String,GraphNode>,
+    flows: HashMap<String,(Vec<String>,Vec<String>)>,
+    // 0:none 1:setting 2:node 3:flow
+    on_type: i8,
+    on_node: (Vec<Node>,String),
+    on_node_config: String,
+    on_setting: String,
+    // from node name, true:necessary false:unnecessary, to node name
+    on_flow_name:String,
+    on_flow: Vec<GraphPlanBuilderFlow>,
+}
+
+impl GraphPlanBuilder {
+    fn add_goto_graph_node(map:&mut HashMap<String,GraphNode>,from_name:String,from_node:String,to_name:String,to_node:String,goto_need_verify:bool){
+        //给to节点增加判断条件
+        if goto_need_verify {
+            if let Some(f) = map.get_mut(to_name.as_str()) {
+                f.add_goto_cond(from_name.clone())
+            }else{
+                let mut graph = GraphNode::new(to_node);
+                graph.add_goto_cond(from_name.as_str());
+                map.insert(to_name.clone(),graph);
             }
-            GraphPlanBuilderEnum::Node(nodes_name,decode,service, config) => {
-                let value = match decode.to_lowercase().as_str() {
-                    "" | "json"=>{
-                        serde_json::from_str::<Value>(config.as_str())?
+        }else{
+            if !map.contains_key(to_name.as_str()) {
+                let graph = GraphNode::new(to_node);
+                map.insert(to_name.clone(),graph);
+            }
+        }
+        //给from节点增加goto
+        if let Some(f) = map.get_mut(from_name.as_str()) {
+            f.add_goto(to_name);
+        }else{
+            let mut graph = GraphNode::new(from_node);
+            graph.add_goto(to_name);
+            map.insert(from_name,graph);
+        }
+    }
+    fn add_flow(&mut self,flow_name:&str,flow:&GraphPlanBuilderFlow)->anyhow::Result<()>{
+        //校验
+        if !flow.from_is_flow {
+            if !self.nodes.contains_key(flow.from.as_str()) {
+                return anyhow::anyhow!("Node[{from}] not found").err()
+            }
+        }else {
+            if let Some((_start,end)) = self.flows.get(flow.from.as_str()) {
+                for i in end{
+                    if let Some(n) = self.graph.get(i) {
+                        if !self.nodes.contains_key(n.node_name.as_str()) {
+                            return anyhow::anyhow!("Node[{from}] not found").err()
+                        }
+                    }else{
+                        return anyhow::anyhow!("Graph[{from}] not found").err()
+                    }
+                }
+            }else{
+                return anyhow::anyhow!("Flow[{from}] not found").err()
+            }
+        }
+        if !flow.to_is_flow{
+            if !self.nodes.contains_key(flow.to.as_str()) {
+                return anyhow::anyhow!("Node[{from}] not found").err()
+            }
+        }else{
+            if let Some((start,_end)) = self.flows.get(flow.from.as_str()) {
+                for i in start{
+                    if let Some(n) = self.graph.get(i) {
+                        if !self.nodes.contains_key(n.node_name.as_str()) {
+                            return anyhow::anyhow!("Node[{from}] not found").err()
+                        }
+                    }else{
+                        return anyhow::anyhow!("Graph[{from}] not found").err()
+                    }
+                }
+            }else{
+                return anyhow::anyhow!("Flow[{from}] not found").err()
+            }
+        }
+        //组装
+        if !flow.from_is_flow && !flow.to_is_flow { //两个节点
+            Self::add_goto_graph_node(&mut self.graph,flow.from_name(flow_name),flow.from.clone(),flow.to_name(flow_name),flow.to.clone(),flow.goto_need_verify);
+        }else if flow.from_is_flow && !flow.to_is_flow { //flow->node
+            let (_start,end) = self.flows.get(flow.from.as_str()).unwrap();
+            for i in end{
+                Self::add_goto_graph_node(&mut self.graph,i.to_string(),"".into(),flow.to_name(flow_name),flow.to.clone(),true);
+            }
+        }else if !flow.from_is_flow && flow.to_is_flow { //node->flow
+            let (start,_end) = self.flows.get(flow.to.as_str()).unwrap();
+            for i in start{
+                Self::add_goto_graph_node(&mut self.graph,flow.from_name(flow_name),flow.from.clone(),i.to_string(),"".into(),flow.goto_need_verify);
+            }
+        }else{ //flow->flow
+            let (_start,end) = self.flows.get(flow.from.as_str()).unwrap();
+            let (start,_end) = self.flows.get(flow.to.as_str()).unwrap();
+            for i in end{
+                for j in start{
+                    Self::add_goto_graph_node(&mut self.graph,i.to_string(),"".into(),j.to_string(),"".into(),true);
+                }
+            }
+        }
+
+        Ok(())
+    }
+    fn change_type(&mut self,ty:i8)->anyhow::Result<()>{
+        match self.on_type {
+            0=>{}
+            1=>{
+                self.setting = toml::from_str::<GraphPlanBuilderSetting>(self.on_setting.as_str())?;
+                self.on_setting = String::new();
+            }
+            2=>{
+                let (nodes,format) = std::mem::take(&mut self.on_node);
+                let config = std::mem::take(&mut self.on_node_config);
+                let config = match format.to_lowercase().as_str() {
+                    ""|"json"=>{
+                        serde_json::from_str::<Value>(self.on_node_config.as_str())?
                     }
                     "toml"=>{
-                        toml::from_str::<Value>(config.as_str())?
+                        toml::from_str::<Value>(self.on_node_config.as_str())?
                     }
                     "yaml"=>{
-                        serde_yaml::from_str::<Value>(config.as_str())?
+                        serde_yaml::from_str::<Value>(self.on_node_config.as_str())?
                     }
                     "custom"=>{
                         Value::String(config)
                     }
                     _=>{
-                        return anyhow::anyhow!("unknown decode format:{decode}").err()
+                        return anyhow::anyhow!("unknown node format[{format}]").err()
                     }
                 };
-                for i in nodes_name{
-                    graph.add_exec_node(Node::new(i).set_service_name(service.as_str()).set_value(value.clone()));
+                for mut n in nodes{
+                    self.nodes.insert(n.name.clone(),n.set_value(config.clone()));
                 }
             }
-            GraphPlanBuilderEnum::Flow(_flow_name, nodes) => {
-                for (f,t) in nodes.into_iter() {
-                    if let Some(s) = graph.get_node_mut(f.as_str()) {
-                        if !s.to.contains(&t) {
-                            s.to.push(t.clone());
+            3=>{
+                let flows = std::mem::take(&mut self.on_flow);
+                let flow_name = std::mem::take(&mut self.on_flow_name);
+                for (from,need,to) in flows{
+                    if self.nodes.contains_key(from.as_str()) {
+                        if let Some(f) = self.graph.get_mut(from.as_str()) {
+                            if !f.goto.contains(&to) {
+                                f.goto.push(to.clone());
+                            }
+                        }else{
+                            self.graph.insert(Self::make_graph_name(flow_name.as_str(),from.as_str()),GraphNode::new(from.clone()).add_goto(to.clone()));
                         }
-                    }else{
-                        return anyhow::anyhow!("not found node[{f}]").err()
-                    }
-                    if let Some(s) = graph.get_node_mut(t.as_str()) {
-                        if !s.from.contains(&f) {
-                            s.from.push(f)
+                    }else if let Some((_start,end)) = self.flows.get(from.as_str()){
+                        for i in end.clone() {
+                            if let Some(f) = self.graph.get_mut(from.as_str()) {
+                                if !f.goto.contains(&to) {
+                                    f.goto.push(to.clone());
+                                }
+                            }else{
+                                self.graph.insert(Self::make_graph_name(flow_name.as_str(),from.as_str()),GraphNode::new(from.clone()).add_goto(to.clone()));
+                            }
                         }
-                    }else{
-                        return anyhow::anyhow!("not found node[{t}]").err()
+                    }else {
+                        return anyhow::anyhow!("Node or Flow [{from}] not found").err()
                     }
                 }
             }
-            GraphPlanBuilderEnum::None => {
-                let setting = crate::graph_plan::GraphPlanBuilderSetting::default();
-                graph.start_node_name = setting.start_node;
-                graph.end_node_name = setting.end_node;
+            _=>{
+
             }
-        }
+        };
+        self.on_type = ty;
         Ok(())
     }
-    pub fn in_setting(&mut self,graph:&mut GraphPlan)->anyhow::Result<()>{
-        self.assemble(graph,GraphPlanBuilderEnum::Setting("".into()))
-    }
-    pub fn in_node<D:Into<String>,S:Into<String>>(&mut self,nodes:Vec<String>,decoder:D,service:S,graph:&mut GraphPlan)->anyhow::Result<()>{
-        self.assemble(graph,GraphPlanBuilderEnum::Node(nodes,decoder.into(),service.into(),"".into()))
-    }
-    pub fn in_flow<S:Into<String>>(&mut self,name:S,graph:&mut GraphPlan)->anyhow::Result<()>{
-        self.assemble(graph,GraphPlanBuilderEnum::Flow(name.into(),vec![]))
-    }
-    pub fn push_line(&mut self,line:&str)->anyhow::Result<()>{
-        match self {
-            GraphPlanBuilderEnum::Setting(cfg) => {
-                if !cfg.is_empty() {
-                    cfg.push_str("\n")
-                }
-                cfg.push_str(line)
-            }
-            GraphPlanBuilderEnum::Node(_, _, _, cfg) => {
-                if !cfg.is_empty() {
-                    cfg.push_str("\n")
-                }
-                cfg.push_str(line)
-            }
-            GraphPlanBuilderEnum::Flow(_, nodes) => {
-                let list = line.split("->").collect::<Vec<_>>();
-                let len = list.len();
-                for i in 0..len-1{
-                    nodes.push((list[i].to_string(),list[i+1].to_string()));
-                }
-            }
-            GraphPlanBuilderEnum::None => {}
-        }
+    fn start_setting(&self,line:&str)->anyhow::Result<()>{
+        let list = Self::remove_annotation_title_and_split(line);
+
         Ok(())
+    }
+    fn make_graph_name(flow_name: &str,graph_node_name:&str)->String{
+        if flow_name.is_empty() {
+            graph_node_name.to_string()
+        }else{
+            format!("{}.{}",flow_name,graph_node_name)
+        }
+    }
+    #[inline]
+    fn ratasbc(input: &str,title:&str) -> Vec<&'_ str> {
+        Self::rm_annotation_title_space_and_split_by_col(input,title)
+    }
+    fn rm_annotation_title_space_and_split_by_col(input: &str,title:&str) -> Vec<&'_ str> {
+        let list = input.splitn(2,"//").collect::<Vec<_>>();
+        let line = list[0].trim_start_matches(title).replace(" ","");
+        line.split(":").collect::<Vec<_>>()
     }
 }
 
+
 impl GraphPlanBuilder{
-    pub fn from_text(txt:&str,graph:&mut GraphPlan)->anyhow::Result<()>{
-        let mut builder = GraphPlanBuilderEnum::default();
+    pub fn parse(&mut self,txt:&str)->anyhow::Result<()>{
         let lines = txt.split("\n").collect::<Vec<_>>();
-        for (i,line) in lines.into_iter().enumerate(){
-            if line.starts_with("//") {
-                //注释
-                continue
-            }else if line.starts_with("[setting]:") {
-                builder.in_setting(graph)?
-            }else if line.starts_with("[node]:") {
-                let split = line.split(":").collect::<Vec<_>>();
-                if split.len() < 4 {
-                    return text_builder_error!(i,"node format error, ex:[node]:json:service_name:node_name_1,node_name_2:").err()
+        for i in lines {
+            match i.to_lowercase().as_str()  {
+                GRAPH_PLAN_BUILDER_ANNOTATION=> { //注释
+                    continue
                 }
-                let nodes = split[3].split(",").map(|x|x.to_string()).collect::<Vec<_>>();
-                builder.in_node(nodes,split[1],split[2],graph)?
-            }else if line.starts_with("[flow]:"){
-                builder.in_flow("",graph)?
-            }else{
-                builder.push_line(line)?;
-                // return text_builder_error!(i,"Unknown identifier").err()
+                GRAPH_PLAN_BUILDER_SETTING=> {
+
+                }
+                GRAPH_PLAN_BUILDER_NODE=>{
+
+                }
+                GRAPH_PLAN_BUILDER_FLOW=>{
+
+                }
+                _=> {
+
+                }
             }
         }
-        builder.assemble(graph,Default::default())
+        Ok(())
+    }
+    pub fn build(self){
+
     }
 }

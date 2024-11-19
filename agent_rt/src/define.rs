@@ -24,11 +24,11 @@ impl Output {
     }
 }
 
-#[derive(Clone,Debug,Eq)]
+#[derive(Clone,Debug,Eq,Default)]
 pub struct Node {
     pub name: String,
     pub service_name: String,
-    pub val_config: Option<Value>,
+    pub config: Value,
 
     pub(crate) middle_index: usize,
     pub(crate) service: Arc<dyn Service + Sync + 'static>,
@@ -49,7 +49,7 @@ impl Node {
         Self {
             name: name.clone(),
             service_name: name,
-            val_config: None,
+            config: Value::Null,
             middle_index: 0,
             service: Arc::new(()),
         }
@@ -63,7 +63,7 @@ impl Node {
         self
     }
     pub fn set_value(mut self,val:Value)->Self{
-        self.val_config = Some(val);self
+        self.config = val;self
     }
 }
 
@@ -72,17 +72,6 @@ pub enum PlanResult {
     Nodes(Vec<Node>),
     End,
     Wait,
-}
-#[derive(Clone,Debug,Eq, PartialEq)]
-pub struct PlanNode{
-    pub from : Vec<String>,
-    pub to:Vec<String>,
-    pub node: Node
-}
-impl From<(Vec<String>,Node,Vec<String>)> for PlanNode{
-    fn from((from,node,to): (Vec<String>, Node, Vec<String>)) -> Self {
-        PlanNode{from,node,to}
-    }
 }
 
 pub trait Plan: Send {
@@ -95,10 +84,10 @@ pub trait Plan: Send {
     fn end_node_name(&self) -> &str {
         END_NODE_NAME
     }
-    fn get(&mut self,name:&str)->Option<&PlanNode>;
+    fn get(&mut self,name:&str)->Option<&Node>;
     fn next(&mut self, name: &str) -> anyhow::Result<PlanResult>;
-    fn remove(&mut self, name: &str) -> Option<PlanNode>;
-    fn insert(&mut self, node: PlanNode);
+    fn remove(&mut self, name: &str) -> Option<Node>;
+    fn insert(&mut self, node: Node);
 }
 
 #[async_trait::async_trait]
