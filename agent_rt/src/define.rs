@@ -1,7 +1,7 @@
 use crate::{Context, END_NODE_NAME, START_NODE_NAME};
 use std::any::Any;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -24,7 +24,7 @@ impl Output {
     }
 }
 
-#[derive(Clone,Debug,Eq,Default)]
+#[derive(Clone)]
 pub struct Node {
     pub name: String,
     pub service_name: String,
@@ -32,6 +32,11 @@ pub struct Node {
 
     pub(crate) middle_index: usize,
     pub(crate) service: Arc<dyn Service + Sync + 'static>,
+}
+impl Debug for Node {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f,"{}",self)
+    }
 }
 impl Display for Node {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -67,7 +72,7 @@ impl Node {
     }
 }
 
-#[derive(Clone,Debug,Eq, PartialEq)]
+#[derive(Clone,Debug,PartialEq)]
 pub enum PlanResult {
     Nodes(Vec<Node>),
     End,

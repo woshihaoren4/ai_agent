@@ -17,13 +17,26 @@ pub use runtime::*;
 mod tests {
     use crate::{GraphPlan, Output, RuntimeBuilder, ServiceLoaderImpl};
 
+    const FLOW_CONFIG:&'static str = r#"\
+// [setting]::
+// start_node = "start"
+
+[node]::add_format:end
+{
+    "prefix":"->"
+}
+
+[flow]:::
+start -> end
+    "#;
+
     //cargo test tests::test_simple_runtime -- --nocapture
     #[tokio::test]
     async fn test_simple_runtime() {
         let rt = RuntimeBuilder::default()
             .set_service_loader(
                 ServiceLoaderImpl::default()
-                    .register_fn("start", |_ctx, _node| async {
+                    .register_fn("add_format", |_ctx, _node| async {
                         println!("service --->1");
                         Ok(Output::new("start_service_success".to_string()))
                     })
@@ -45,11 +58,13 @@ mod tests {
                 Ok(())
             })
             .build();
+        let plan = GraphPlan::try_from(FLOW_CONFIG).unwrap();
+        println!("plan:{}",plan);
         let result = rt
-            .context(GraphPlan::test())
+            .context(plan)
             .go::<_, String>("hello world")
             .await;
         println!("{result:?}");
-        assert_eq!("end_service_success", result.unwrap().as_str())
+        assert_eq!("start_service_success", result.unwrap().as_str())
     }
 }

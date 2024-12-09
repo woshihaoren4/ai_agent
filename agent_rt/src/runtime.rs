@@ -125,7 +125,7 @@ impl Runtime {
                 if let PlanResult::Nodes(nodes) = c.plan.next(start_node_name.as_str())? {
                     Ok((nodes, c.rt.clone()))
                 } else {
-                    anyhow::anyhow!("plan start node result is not PlanResult::Nodes").err()
+                    anyhow::anyhow!("plan start node[{}] result is not PlanResult::Nodes",start_node_name).err()
                 }
             })
             .await
